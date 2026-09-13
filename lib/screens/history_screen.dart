@@ -61,38 +61,40 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   Widget _buildHeader() => Container(
-        height: 58,
-        decoration: const BoxDecoration(
-          border: Border(bottom: BorderSide(color: Color(0xFF22252E))),
-        ),
-        child: Row(
-          children: [
-            const SizedBox(width: 48),
-            const Expanded(
-              child: Text(
-                'MY HISTORY',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: _accent,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  fontFamily: 'monospace',
-                  letterSpacing: 1.1,
-                ),
-              ),
+    height: 58,
+    decoration: const BoxDecoration(
+      border: Border(bottom: BorderSide(color: Color(0xFF22252E))),
+    ),
+    child: Row(
+      children: [
+        const SizedBox(width: 48),
+        const Expanded(
+          child: Text(
+            'MY HISTORY',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: _accent,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              fontFamily: 'monospace',
+              letterSpacing: 1.1,
             ),
-            IconButton(
-              icon: const Icon(Icons.refresh_outlined, color: _muted, size: 21),
-              onPressed: _loadHistory,
-              tooltip: 'Refresh',
-            ),
-          ],
+          ),
         ),
-      );
+        IconButton(
+          icon: const Icon(Icons.refresh_outlined, color: _muted, size: 21),
+          onPressed: _loadHistory,
+          tooltip: 'Refresh',
+        ),
+      ],
+    ),
+  );
 
   Widget _buildBody() {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator(color: _accent, strokeWidth: 2));
+      return const Center(
+        child: CircularProgressIndicator(color: _accent, strokeWidth: 2),
+      );
     }
     if (_error != null) {
       return Center(
@@ -101,11 +103,22 @@ class _HistoryScreenState extends State<HistoryScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.error_outline, color: Color(0xFFC95B5B), size: 38),
+              const Icon(
+                Icons.error_outline,
+                color: Color(0xFFC95B5B),
+                size: 38,
+              ),
               const SizedBox(height: 12),
-              Text(_error!, textAlign: TextAlign.center, style: const TextStyle(color: _muted, fontSize: 13)),
+              Text(
+                _error!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: _muted, fontSize: 13),
+              ),
               const SizedBox(height: 16),
-              TextButton(onPressed: _loadHistory, child: const Text('RETRY', style: TextStyle(color: _accent))),
+              TextButton(
+                onPressed: _loadHistory,
+                child: const Text('RETRY', style: TextStyle(color: _accent)),
+              ),
             ],
           ),
         ),
@@ -118,7 +131,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
           children: [
             Icon(Icons.calendar_today_outlined, color: _accent, size: 42),
             SizedBox(height: 12),
-            Text('No attendance records yet', style: TextStyle(color: _muted, fontSize: 13)),
+            Text(
+              'No attendance records yet',
+              style: TextStyle(color: _muted, fontSize: 13),
+            ),
           ],
         ),
       );
@@ -131,21 +147,35 @@ class _HistoryScreenState extends State<HistoryScreen> {
         padding: const EdgeInsets.all(16),
         itemCount: _attendanceHistory.length,
         separatorBuilder: (_, _) => const SizedBox(height: 14),
-        itemBuilder: (context, index) => _buildDayCard(_attendanceHistory[index], index),
+        itemBuilder: (context, index) =>
+            _buildDayCard(_attendanceHistory[index], index),
       ),
     );
   }
 
   Widget _buildDayCard(dynamic record, int index) {
-    final date = DateTime.tryParse(record['attendance_date']?.toString() ?? '') ?? DateTime.now();
+    final date =
+        DateTime.tryParse(record['attendance_date']?.toString() ?? '') ??
+        DateTime.now();
     final dayId = record['attendance_date']?.toString() ?? index.toString();
     final morningIn = record['morning_time_in']?.toString();
     final morningOut = record['morning_time_out']?.toString();
     final afternoonIn = record['afternoon_time_in']?.toString();
     final afternoonOut = record['afternoon_time_out']?.toString();
     final position = record['position']?.toString() ?? '';
-    final isPresent = _hasTime(morningIn) || _hasTime(afternoonIn);
-    final statusColor = isPresent ? const Color(0xFF5FAE7A) : const Color(0xFFC95B5B);
+    final status = _dayStatus(
+      record['status_morning']?.toString(),
+      record['status_afternoon']?.toString(),
+      morningIn,
+      afternoonIn,
+    );
+    final statusColor = _statusColor(status);
+    final statusIcon = switch (status) {
+      'Present' => Icons.check,
+      'Late' => Icons.schedule,
+      'Absent' => Icons.close,
+      _ => Icons.hourglass_empty,
+    };
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -155,68 +185,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-        color: _card,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: _border),
-      ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-          Row(
-            children: [
-              Container(
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: statusColor.withValues(alpha: 0.55)),
-                ),
-                child: Icon(isPresent ? Icons.check : Icons.close, color: statusColor, size: 19),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(DateFormat('EEEE, MMM d, yyyy').format(date), style: const TextStyle(color: Color(0xFFE6E7EA), fontSize: 13, fontWeight: FontWeight.w500)),
-                    const SizedBox(height: 2),
-                    Text(isPresent ? 'Present' : 'Absent', style: TextStyle(color: statusColor, fontSize: 11)),
-                    if (position.isNotEmpty) ...[
-                      const SizedBox(height: 2),
-                      Text(position, style: const TextStyle(color: _muted, fontSize: 11)),
-                    ],
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: statusColor.withValues(alpha: 0.55)),
-                ),
-                child: Text(isPresent ? 'PRESENT' : 'ABSENT', style: TextStyle(color: statusColor, fontSize: 10, fontWeight: FontWeight.w600, letterSpacing: 0.4)),
-              ),
-            ],
-          ),
-          if (_expandedDayIds.contains(dayId)) ...[
-            const SizedBox(height: 14),
-            _buildSessionCard('Morning session', morningIn, morningOut, const Color(0xFFD5A24C)),
-            const SizedBox(height: 10),
-            _buildSessionCard('Afternoon session', afternoonIn, afternoonOut, _accent),
-          ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSessionCard(String label, String? timeIn, String? timeOut, Color labelColor) => Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: _graphite,
-          borderRadius: BorderRadius.circular(8),
+          color: _card,
+          borderRadius: BorderRadius.circular(10),
           border: Border.all(color: _border),
         ),
         child: Column(
@@ -224,36 +194,198 @@ class _HistoryScreenState extends State<HistoryScreen> {
           children: [
             Row(
               children: [
-                Container(width: 6, height: 6, decoration: BoxDecoration(color: labelColor, shape: BoxShape.circle)),
-                const SizedBox(width: 7),
-                Text(label, style: TextStyle(color: labelColor, fontSize: 11, fontWeight: FontWeight.w500)),
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: statusColor.withValues(alpha: 0.55),
+                    ),
+                  ),
+                  child: Icon(statusIcon, color: statusColor, size: 19),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        DateFormat('EEEE, MMM d, yyyy').format(date),
+                        style: const TextStyle(
+                          color: Color(0xFFE6E7EA),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        status,
+                        style: TextStyle(color: statusColor, fontSize: 11),
+                      ),
+                      if (position.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          position,
+                          style: const TextStyle(color: _muted, fontSize: 11),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 9,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: statusColor.withValues(alpha: 0.55),
+                    ),
+                  ),
+                  child: Text(
+                    status.toUpperCase(),
+                    style: TextStyle(
+                      color: statusColor,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.4,
+                    ),
+                  ),
+                ),
               ],
             ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(child: _buildTimeBox('Time in', timeIn)),
-                const Padding(padding: EdgeInsets.symmetric(horizontal: 8), child: Icon(Icons.arrow_forward, color: _muted, size: 15)),
-                Expanded(child: _buildTimeBox('Time out', timeOut)),
-              ],
+            if (_expandedDayIds.contains(dayId)) ...[
+              const SizedBox(height: 14),
+              _buildSessionCard(
+                'Morning session',
+                morningIn,
+                morningOut,
+                const Color(0xFFD5A24C),
+              ),
+              const SizedBox(height: 10),
+              _buildSessionCard(
+                'Afternoon session',
+                afternoonIn,
+                afternoonOut,
+                _accent,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSessionCard(
+    String label,
+    String? timeIn,
+    String? timeOut,
+    Color labelColor,
+  ) => Container(
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      color: _graphite,
+      borderRadius: BorderRadius.circular(8),
+      border: Border.all(color: _border),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 6,
+              height: 6,
+              decoration: BoxDecoration(
+                color: labelColor,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 7),
+            Text(
+              label,
+              style: TextStyle(
+                color: labelColor,
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ],
         ),
-      );
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(child: _buildTimeBox('Time in', timeIn)),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 8),
+              child: Icon(Icons.arrow_forward, color: _muted, size: 15),
+            ),
+            Expanded(child: _buildTimeBox('Time out', timeOut)),
+          ],
+        ),
+      ],
+    ),
+  );
 
   Widget _buildTimeBox(String label, String? time) => Container(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-        decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(6), border: Border.all(color: _border)),
-        child: Column(
-          children: [
-            Text(label, style: const TextStyle(color: _muted, fontSize: 10)),
-            const SizedBox(height: 3),
-            Text(_formatTime(time), style: const TextStyle(color: _muted, fontSize: 12, fontWeight: FontWeight.w500)),
-          ],
+    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+    decoration: BoxDecoration(
+      color: _card,
+      borderRadius: BorderRadius.circular(6),
+      border: Border.all(color: _border),
+    ),
+    child: Column(
+      children: [
+        Text(label, style: const TextStyle(color: _muted, fontSize: 10)),
+        const SizedBox(height: 3),
+        Text(
+          _formatTime(time),
+          style: const TextStyle(
+            color: _muted,
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          ),
         ),
-      );
+      ],
+    ),
+  );
 
   bool _hasTime(String? time) => time != null && time.isNotEmpty;
+
+  String _dayStatus(
+    String? morningStatus,
+    String? afternoonStatus,
+    String? morningIn,
+    String? afternoonIn,
+  ) {
+    final statuses = [
+      morningStatus,
+      afternoonStatus,
+    ].whereType<String>().where((status) => status.isNotEmpty).toList();
+    if (statuses.contains('absent') &&
+        statuses.every((status) => status == 'absent')) {
+      return 'Absent';
+    }
+    if (statuses.contains('late')) return 'Late';
+    if (statuses.contains('present') ||
+        _hasTime(morningIn) ||
+        _hasTime(afternoonIn)) {
+      return 'Present';
+    }
+    if (statuses.contains('absent')) return 'Absent';
+    return 'Pending';
+  }
+
+  Color _statusColor(String status) => switch (status) {
+    'Present' => const Color(0xFF5FAE7A),
+    'Late' => const Color(0xFFD5A24C),
+    'Absent' => const Color(0xFFC95B5B),
+    _ => _muted,
+  };
 
   String _formatTime(String? time) {
     if (!_hasTime(time)) return '--:--';
