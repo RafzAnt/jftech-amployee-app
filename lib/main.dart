@@ -155,7 +155,8 @@ class _SplashScreenState extends State<SplashScreen> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => isLoggedIn ? const MainScreen() : const LoginScreen(),
+          builder: (context) =>
+              isLoggedIn ? const MainScreen() : const LoginScreen(),
         ),
       );
     }
@@ -222,28 +223,6 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
 
-  Future<void> _logout() async {
-    final shouldLogout = await showDialog<bool>(
-      context: context,
-      useRootNavigator: true,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Log out'),
-        content: const Text('Do you want to log out from this device?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(dialogContext, rootNavigator: true).pop(false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.of(dialogContext, rootNavigator: true).pop(true), child: const Text('Log out')),
-        ],
-      ),
-    );
-    if (shouldLogout != true || !mounted) return;
-    await AuthService.logout();
-    if (!mounted) return;
-    Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
-      (route) => false,
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -266,37 +245,27 @@ class _MainScreenState extends State<MainScreen> {
               border: Border(top: BorderSide(color: Color(0xFF22252E))),
             ),
             child: BottomNavigationBar(
-          currentIndex: _currentIndex,
-          onTap: (index) {
-            if (index == 3) {
-              _logout();
-              return;
-            }
-            setState(() => _currentIndex = index);
-          },
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          selectedItemColor: const Color(0xFF4C7EDB),
-          unselectedItemColor: const Color(0xFF8A8D94),
-          type: BottomNavigationBarType.fixed,
-          items: const [
-              BottomNavigationBarItem(
-                icon: Icon(Icons.qr_code_scanner_outlined),
-                label: 'Scan QR',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.inventory_2_outlined),
-                label: 'Inventory',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.history_outlined),
-                label: 'History',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.logout_outlined),
-                label: 'Logout',
-              ),
-            ],
+              currentIndex: _currentIndex,
+              onTap: (index) => setState(() => _currentIndex = index),
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              selectedItemColor: const Color(0xFF4C7EDB),
+              unselectedItemColor: const Color(0xFF8A8D94),
+              type: BottomNavigationBarType.fixed,
+              items: const [
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.qr_code_scanner_outlined),
+                  label: 'Scan QR',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.inventory_2_outlined),
+                  label: 'Inventory',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.history_outlined),
+                  label: 'History',
+                ),
+              ],
             ),
           ),
         ),

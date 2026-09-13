@@ -10,7 +10,6 @@ class AuthService {
   static const _baseUrlKey = 'apiBaseUrl';
   static const _pendingLogoutIdsKey = 'pendingLogoutHistoryIds';
 
-  
   static const _defaultBaseUrl = 'http://localhost:8000/backend/api';
   static String _baseUrl = _defaultBaseUrl;
 
@@ -55,65 +54,120 @@ class AuthService {
     await prefs.setString(_baseUrlKey, _baseUrl);
   }
 
-  static Future<Map<String, dynamic>> login(String username, String password) async {
+  static Future<Map<String, dynamic>> login(
+    String username,
+    String password,
+  ) async {
     final prefs = await SharedPreferences.getInstance();
     await _flushPendingLogouts(prefs);
     try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/employee_login.php'),
-        body: {
-          'username': username,
-          'password': password,
-        },
-      ).timeout(const Duration(seconds: 10));
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/employee_login.php'),
+            body: {'username': username, 'password': password},
+          )
+          .timeout(const Duration(seconds: 10));
 
-       if (response.statusCode == 200) {
-         try {
-           final decoded = jsonDecode(response.body);
-           if (decoded is! Map<String, dynamic>) {
-             return {'success': false, 'message': 'Invalid server response. The login API must return a JSON object.'};
-           }
-           final data = decoded;
-if (data['success'] == true && data['user'] is Map) {
-              final user = data['user'] as Map;
-              await prefs.setBool(_isLoggedInKey, true);
-              await prefs.remove(_backgroundAtKey);
-              await prefs.setInt('userId', int.tryParse(user['id'].toString()) ?? 0);
-              await prefs.setString('username', user['username']?.toString() ?? '');
-              await prefs.setString('fullName', user['full_name']?.toString() ?? '');
-              await prefs.setString('position', user['position']?.toString() ?? '');
-              await prefs.setInt('employeeId', int.tryParse(user['employee_id'].toString()) ?? 0);
-              if (user['login_history_id'] != null) {
-                await prefs.setInt('login_history_id', int.tryParse(user['login_history_id'].toString()) ?? 0);
-              } else {
-                await prefs.remove('login_history_id');
-              }
-            }
-           return data;
-          } on FormatException catch (_) {
-            if (response.body.contains('<html') || response.body.contains('<!DOCTYPE')) {
-              if (response.body.contains('sql310.infinityfree.com') || response.body.contains('php_network_getaddresses')) {
-                return {'success': false, 'message': 'Database connection error: Your PHP backend cannot connect to the MySQL database. Please check your database credentials in the PHP files and ensure the database server is accessible.'};
-              }
-              if (response.body.contains('aes.js') || response.body.contains('__test') || response.body.contains('slowAES')) {
-                return {'success': false, 'message': 'InfinityFree anti-bot challenge detected. Flutter mobile apps cannot bypass this JavaScript check. Please upgrade to InfinityFree Premium hosting or deploy your backend to a host that allows non-browser API access.'};
-              }
-              return {'success': false, 'message': 'Server returned an error page instead of JSON. Check your PHP backend logs for issues.'};
-            }
-            return {'success': false, 'message': 'Invalid response format from server. Verify that the deployed API URL returns JSON.'};
+      if (response.statusCode == 200) {
+        try {
+          final decoded = jsonDecode(response.body);
+          if (decoded is! Map<String, dynamic>) {
+            return {
+              'success': false,
+              'message':
+                  'Invalid server response. The login API must return a JSON object.',
+            };
           }
-       } else {
-         return {'success': false, 'message': 'Server error: ${response.statusCode}: ${response.body}'};
-       }
+          final data = decoded;
+          if (data['success'] == true && data['user'] is Map) {
+            final user = data['user'] as Map;
+            final loginHistoryId = int.tryParse(
+              user['login_history_id']?.toString() ?? '',
+            );
+            await prefs.setBool(_isLoggedInKey, true);
+            await prefs.remove(_backgroundAtKey);
+            await prefs.setInt(
+              'userId',
+              int.tryParse(user['id'].toString()) ?? 0,
+            );
+            await prefs.setString(
+              'username',
+              user['username']?.toString() ?? '',
+            );
+            await prefs.setString(
+              'fullName',
+              user['full_name']?.toString() ?? '',
+            );
+            final assignedPosition =
+                user['position'] ??
+                user['employee_position'] ??
+                data['position'];
+            await prefs.setString(
+              'position',
+              assignedPosition?.toString().trim() ?? '',
+            );
+            await prefs.setInt(
+              'employeeId',
+              int.tryParse(user['employee_id'].toString()) ?? 0,
+            );
+            if (loginHistoryId != null && loginHistoryId > 0) {
+              await prefs.setInt('login_history_id', loginHistoryId);
+            } else {
+              // Keep login compatible with a backend that has not yet been
+              // updated, without reusing a history ID from an earlier login.
+              await prefs.remove('login_history_id');
+            }
+          }
+          return data;
+        } on FormatException catch (_) {
+          if (response.body.contains('<html') ||
+              response.body.contains('<!DOCTYPE')) {
+            if (response.body.contains('sql310.infinityfree.com') ||
+                response.body.contains('php_network_getaddresses')) {
+              return {
+                'success': false,
+                'message':
+                    'Database connection error: Your PHP backend cannot connect to the MySQL database. Please check your database credentials in the PHP files and ensure the database server is accessible.',
+              };
+            }
+            if (response.body.contains('aes.js') ||
+                response.body.contains('__test') ||
+                response.body.contains('slowAES')) {
+              return {
+                'success': false,
+                'message':
+                    'InfinityFree anti-bot challenge detected. Flutter mobile apps cannot bypass this JavaScript check. Please upgrade to InfinityFree Premium hosting or deploy your backend to a host that allows non-browser API access.',
+              };
+            }
+            return {
+              'success': false,
+              'message':
+                  'Server returned an error page instead of JSON. Check your PHP backend logs for issues.',
+            };
+          }
+          return {
+            'success': false,
+            'message':
+                'Invalid response format from server. Verify that the deployed API URL returns JSON.',
+          };
+        }
+      } else {
+        return {
+          'success': false,
+          'message': 'Server error: ${response.statusCode}: ${response.body}',
+        };
+      }
     } on TimeoutException {
       return {
         'success': false,
-        'message': 'The JFTECH server did not respond. Check that the deployed domain, SSL certificate, and PHP API are online.',
+        'message':
+            'The JFTECH server did not respond. Check that the deployed domain, SSL certificate, and PHP API are online.',
       };
     } catch (e) {
       return {
         'success': false,
-        'message': 'Cannot reach the JFTECH server at $baseUrl. Check the deployed API URL and internet connection.',
+        'message':
+            'Cannot reach the JFTECH server at $baseUrl. Check the deployed API URL and internet connection.',
       };
     }
   }
@@ -126,7 +180,10 @@ if (data['success'] == true && data['user'] is Map) {
   static Future<void> markAppInBackground() async {
     final prefs = await SharedPreferences.getInstance();
     if (prefs.getBool(_isLoggedInKey) ?? false) {
-      await prefs.setInt(_backgroundAtKey, DateTime.now().millisecondsSinceEpoch);
+      await prefs.setInt(
+        _backgroundAtKey,
+        DateTime.now().millisecondsSinceEpoch,
+      );
     }
   }
 
@@ -136,9 +193,12 @@ if (data['success'] == true && data['user'] is Map) {
 
     final backgroundAt = prefs.getInt(_backgroundAtKey);
     if (backgroundAt == null) return false;
-    return DateTime.now().difference(DateTime.fromMillisecondsSinceEpoch(backgroundAt)) >= sessionTimeout;
+    return DateTime.now().difference(
+          DateTime.fromMillisecondsSinceEpoch(backgroundAt),
+        ) >=
+        sessionTimeout;
   }
- 
+
   static Future<Map<String, dynamic>> getUserData() async {
     final prefs = await SharedPreferences.getInstance();
     return {
@@ -165,18 +225,17 @@ if (data['success'] == true && data['user'] is Map) {
     // Keep the server URL and any queued logout records. Clearing all shared
     // preferences here used to discard an unsent logout time permanently.
     await _clearSession(prefs);
-    return {
-      'success': true,
-      'logoutRecorded': logoutRecorded,
-    };
+    return {'success': true, 'logoutRecorded': logoutRecorded};
   }
 
   static Future<bool> _recordLogout(int historyId) async {
     try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/employee_logout.php'),
-        body: {'login_history_id': historyId.toString()},
-      ).timeout(const Duration(seconds: 10));
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/employee_logout.php'),
+            body: {'login_history_id': historyId.toString()},
+          )
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode != 200) return false;
       final data = jsonDecode(response.body);

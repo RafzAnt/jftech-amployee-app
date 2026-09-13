@@ -14,7 +14,8 @@ class ScannerScreen extends StatefulWidget {
   State<ScannerScreen> createState() => _ScannerScreenState();
 }
 
-class _ScannerScreenState extends State<ScannerScreen> with WidgetsBindingObserver {
+class _ScannerScreenState extends State<ScannerScreen>
+    with WidgetsBindingObserver {
   static const _graphite = Color(0xFF14161C);
   static const _card = Color(0xFF1A1C23);
   static const _accent = Color(0xFF4C7EDB);
@@ -99,6 +100,9 @@ class _ScannerScreenState extends State<ScannerScreen> with WidgetsBindingObserv
     });
   }
 
+  String get _loggedInAs =>
+      _position.trim().isEmpty ? 'Employee' : _position.trim();
+
   Future<void> _logout() async {
     final shouldLogout = await showDialog<bool>(
       context: context,
@@ -109,8 +113,16 @@ class _ScannerScreenState extends State<ScannerScreen> with WidgetsBindingObserv
         title: const Text('Log out'),
         content: const Text('Do you want to log out from this device?'),
         actions: [
-          TextButton(onPressed: () => Navigator.of(dialogContext, rootNavigator: true).pop(false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.of(dialogContext, rootNavigator: true).pop(true), child: const Text('Log out')),
+          TextButton(
+            onPressed: () =>
+                Navigator.of(dialogContext, rootNavigator: true).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () =>
+                Navigator.of(dialogContext, rootNavigator: true).pop(true),
+            child: const Text('Log out'),
+          ),
         ],
       ),
     );
@@ -158,7 +170,10 @@ class _ScannerScreenState extends State<ScannerScreen> with WidgetsBindingObserv
       builder: (dialogContext) => AlertDialog(
         backgroundColor: _card,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        title: Text(isSuccess ? 'Scan recorded' : 'Scan failed', style: const TextStyle(color: _accent)),
+        title: Text(
+          isSuccess ? 'Scan recorded' : 'Scan failed',
+          style: const TextStyle(color: _accent),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -166,7 +181,10 @@ class _ScannerScreenState extends State<ScannerScreen> with WidgetsBindingObserv
             Text(message, style: const TextStyle(color: Color(0xFFE6E7EA))),
             if (isSuccess && position.isNotEmpty) ...[
               const SizedBox(height: 10),
-              Text('Position: $position', style: const TextStyle(color: _muted, fontSize: 13)),
+              Text(
+                'Position: $position',
+                style: const TextStyle(color: _muted, fontSize: 13),
+              ),
             ],
           ],
         ),
@@ -174,7 +192,10 @@ class _ScannerScreenState extends State<ScannerScreen> with WidgetsBindingObserv
           if (scanType.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(right: 8),
-              child: Text('$scanType · $timeRecorded', style: const TextStyle(color: _muted, fontSize: 12)),
+              child: Text(
+                '$scanType · $timeRecorded',
+                style: const TextStyle(color: _muted, fontSize: 12),
+              ),
             ),
           TextButton(
             onPressed: () {
@@ -217,12 +238,20 @@ class _ScannerScreenState extends State<ScannerScreen> with WidgetsBindingObserv
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.camera_alt_outlined, size: 64, color: Color(0xFF4C7EDB)),
+                  const Icon(
+                    Icons.camera_alt_outlined,
+                    size: 64,
+                    color: Color(0xFF4C7EDB),
+                  ),
                   const SizedBox(height: 16),
                   Text(
                     'Camera permission is required',
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   const Text(
@@ -241,8 +270,13 @@ class _ScannerScreenState extends State<ScannerScreen> with WidgetsBindingObserv
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _accent,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 14,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
                   ),
                 ],
@@ -286,171 +320,220 @@ class _ScannerScreenState extends State<ScannerScreen> with WidgetsBindingObserv
   }
 
   Widget _buildHeader() => Container(
-        height: 58,
-        padding: const EdgeInsets.only(left: 20, right: 10),
-        decoration: const BoxDecoration(
-          border: Border(bottom: BorderSide(color: Color(0xFF22252E))),
+    height: 58,
+    padding: const EdgeInsets.only(left: 20, right: 10),
+    decoration: const BoxDecoration(
+      border: Border(bottom: BorderSide(color: Color(0xFF22252E))),
+    ),
+    child: Stack(
+      children: [
+        const Align(
+          alignment: Alignment.centerLeft,
+          child: Text(
+            'SCAN QR CODE',
+            style: TextStyle(
+              color: _accent,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              fontFamily: 'monospace',
+              letterSpacing: 1.1,
+            ),
+          ),
         ),
-        child: Row(
-          children: [
-            const Expanded(
-              child: Text(
-                'SCAN QR CODE',
-                style: TextStyle(
-                  color: _accent,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  fontFamily: 'monospace',
-                  letterSpacing: 1.1,
-                ),
+        Align(
+          alignment: Alignment.center,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 112),
+            child: Text(
+              'Logged in as $_loggedInAs',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: _muted,
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
               ),
             ),
-            IconButton(
-              tooltip: 'Log out',
-              onPressed: _logout,
-              icon: const Icon(Icons.logout_outlined, color: _muted, size: 21),
-            ),
-          ],
+          ),
         ),
-      );
+        Align(
+          alignment: Alignment.centerRight,
+          child: IconButton(
+            tooltip: 'Log out',
+            onPressed: _logout,
+            icon: const Icon(Icons.logout_outlined, color: _muted, size: 21),
+          ),
+        ),
+      ],
+    ),
+  );
 
   Widget _buildUserCard() => Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: _card,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: const Color(0xFF2C2F38)),
+    width: double.infinity,
+    padding: const EdgeInsets.all(14),
+    decoration: BoxDecoration(
+      color: _card,
+      borderRadius: BorderRadius.circular(10),
+      border: Border.all(color: const Color(0xFF2C2F38)),
+    ),
+    child: Row(
+      children: [
+        Container(
+          width: 36,
+          height: 36,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: const Color(0xFF23262F),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: _accent),
+          ),
+          child: Text(
+            _fullName.isNotEmpty ? _fullName[0].toUpperCase() : '?',
+            style: const TextStyle(
+              color: _accent,
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ),
-        child: Row(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: const Color(0xFF23262F),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: _accent),
+        const SizedBox(width: 11),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                _fullName.isEmpty ? 'Employee' : _fullName,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Color(0xFFE6E7EA),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
-              child: Text(
-                _fullName.isNotEmpty ? _fullName[0].toUpperCase() : '?',
-                style: const TextStyle(color: _accent, fontSize: 15, fontWeight: FontWeight.w600),
+              const SizedBox(height: 3),
+              Text(
+                DateFormat('EEE, MMM d, yyyy').format(DateTime.now()),
+                style: const TextStyle(color: _muted, fontSize: 11),
               ),
-            ),
-            const SizedBox(width: 11),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _fullName.isEmpty ? 'Employee' : _fullName,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: Color(0xFFE6E7EA), fontSize: 14, fontWeight: FontWeight.w500),
-                  ),
-                  const SizedBox(height: 3),
-                  if (_position.isNotEmpty)
-                    Text(
-                      _position,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: _accent, fontSize: 11, fontWeight: FontWeight.w500),
-                    ),
-                  if (_position.isNotEmpty) const SizedBox(height: 3),
-                  Text(
-                    DateFormat('EEE, MMM d, yyyy').format(DateTime.now()),
-                    style: const TextStyle(color: _muted, fontSize: 11),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: _accent),
-              ),
-              child: Text(
-                DateFormat('hh:mm a').format(DateTime.now()),
-                style: const TextStyle(color: _accent, fontSize: 11, fontWeight: FontWeight.w500),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
-      );
+        const SizedBox(width: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: _accent),
+          ),
+          child: Text(
+            DateFormat('hh:mm a').format(DateTime.now()),
+            style: const TextStyle(
+              color: _accent,
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
 
   Widget _buildScanFrame() => SizedBox(
-        width: 220,
-        height: 220,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: MobileScanner(
-                controller: _scannerController,
-                tapToFocus: true,
-                placeholderBuilder: (_) => const ColoredBox(color: Color(0xFF0D0F14)),
-                errorBuilder: (_, error) => ColoredBox(
-                  color: const Color(0xFF1A1C23),
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.camera_alt_outlined, color: _accent, size: 30),
-                        const SizedBox(height: 8),
-                        Text(
-                          error.errorCode.message,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(color: _muted, fontSize: 11),
-                        ),
-                      ],
+    width: 220,
+    height: 220,
+    child: Stack(
+      fit: StackFit.expand,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: MobileScanner(
+            controller: _scannerController,
+            tapToFocus: true,
+            placeholderBuilder: (_) =>
+                const ColoredBox(color: Color(0xFF0D0F14)),
+            errorBuilder: (_, error) => ColoredBox(
+              color: const Color(0xFF1A1C23),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.camera_alt_outlined,
+                      color: _accent,
+                      size: 30,
                     ),
-                  ),
+                    const SizedBox(height: 8),
+                    Text(
+                      error.errorCode.message,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: _muted, fontSize: 11),
+                    ),
+                  ],
                 ),
-                onDetect: (capture) {
-                  if (!_isScanning || _processing) return;
-                  for (final barcode in capture.barcodes) {
-                    final code = barcode.rawValue;
-                    if (code != null) {
-                      setState(() => _isScanning = false);
-                      _handleScan(code);
-                      break;
-                    }
-                  }
-                },
               ),
             ),
-            const Positioned(top: 0, left: 0, child: _FrameCorner(top: true, left: true)),
-            const Positioned(top: 0, right: 0, child: _FrameCorner(top: true, left: false)),
-            const Positioned(bottom: 0, left: 0, child: _FrameCorner(top: false, left: true)),
-            const Positioned(bottom: 0, right: 0, child: _FrameCorner(top: false, left: false)),
-            if (_processing)
-              const Center(child: CircularProgressIndicator(color: _accent, strokeWidth: 2)),
-          ],
+            onDetect: (capture) {
+              if (!_isScanning || _processing) return;
+              for (final barcode in capture.barcodes) {
+                final code = barcode.rawValue;
+                if (code != null) {
+                  setState(() => _isScanning = false);
+                  _handleScan(code);
+                  break;
+                }
+              }
+            },
+          ),
         ),
-      );
+        const Positioned(
+          top: 0,
+          left: 0,
+          child: _FrameCorner(top: true, left: true),
+        ),
+        const Positioned(
+          top: 0,
+          right: 0,
+          child: _FrameCorner(top: true, left: false),
+        ),
+        const Positioned(
+          bottom: 0,
+          left: 0,
+          child: _FrameCorner(top: false, left: true),
+        ),
+        const Positioned(
+          bottom: 0,
+          right: 0,
+          child: _FrameCorner(top: false, left: false),
+        ),
+        if (_processing)
+          const Center(
+            child: CircularProgressIndicator(color: _accent, strokeWidth: 2),
+          ),
+      ],
+    ),
+  );
 
   Widget _buildInfoPill() => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: _card,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFF2C2F38)),
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    decoration: BoxDecoration(
+      color: _card,
+      borderRadius: BorderRadius.circular(20),
+      border: Border.all(color: const Color(0xFF2C2F38)),
+    ),
+    child: const Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(Icons.info_outline, size: 15, color: _accent),
+        SizedBox(width: 7),
+        Text(
+          'First scan = time in, second scan = time out',
+          style: TextStyle(color: _muted, fontSize: 11),
         ),
-        child: const Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.info_outline, size: 15, color: _accent),
-            SizedBox(width: 7),
-            Text(
-              'First scan = time in, second scan = time out',
-              style: TextStyle(color: _muted, fontSize: 11),
-            ),
-          ],
-        ),
-      );
+      ],
+    ),
+  );
 }
 
 class _FrameCorner extends StatelessWidget {
@@ -461,15 +544,23 @@ class _FrameCorner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        width: 24,
-        height: 24,
-        decoration: BoxDecoration(
-          border: Border(
-            top: top ? const BorderSide(color: Color(0xFF4C7EDB), width: 2) : BorderSide.none,
-            bottom: !top ? const BorderSide(color: Color(0xFF4C7EDB), width: 2) : BorderSide.none,
-            left: left ? const BorderSide(color: Color(0xFF4C7EDB), width: 2) : BorderSide.none,
-            right: !left ? const BorderSide(color: Color(0xFF4C7EDB), width: 2) : BorderSide.none,
-          ),
-        ),
-      );
+    width: 24,
+    height: 24,
+    decoration: BoxDecoration(
+      border: Border(
+        top: top
+            ? const BorderSide(color: Color(0xFF4C7EDB), width: 2)
+            : BorderSide.none,
+        bottom: !top
+            ? const BorderSide(color: Color(0xFF4C7EDB), width: 2)
+            : BorderSide.none,
+        left: left
+            ? const BorderSide(color: Color(0xFF4C7EDB), width: 2)
+            : BorderSide.none,
+        right: !left
+            ? const BorderSide(color: Color(0xFF4C7EDB), width: 2)
+            : BorderSide.none,
+      ),
+    ),
+  );
 }

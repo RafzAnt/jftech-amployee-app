@@ -18,6 +18,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _usernameFocusNode = FocusNode();
   final _passwordFocusNode = FocusNode();
   bool _isLoading = false;
+  bool _obscurePassword = true;
   String? _errorMessage;
 
   Future<void> _login() async {
@@ -61,22 +62,27 @@ class _LoginScreenState extends State<LoginScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                IconButton(
-                  icon: const Icon(Icons.settings_outlined, color: Color(0xFF8A8D94)),
-                  tooltip: 'Server settings',
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const SettingsScreen()),
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    IconButton(
+                      icon: const Icon(
+                        Icons.settings_outlined,
+                        color: Color(0xFF8A8D94),
+                      ),
+                      tooltip: 'Server settings',
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const SettingsScreen(),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            const SizedBox(height: 36),
-            Image.asset(
+                const SizedBox(height: 36),
+                Image.asset(
                   'assets/images/jftech_logo.png',
                   width: 150,
                   height: 150,
@@ -118,12 +124,19 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.error_outline, color: Color(0xFFFF1744), size: 20),
+                        const Icon(
+                          Icons.error_outline,
+                          color: Color(0xFFFF1744),
+                          size: 20,
+                        ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             _errorMessage!,
-                            style: const TextStyle(color: Color(0xFFFF1744), fontSize: 14),
+                            style: const TextStyle(
+                              color: Color(0xFFFF1744),
+                              fontSize: 14,
+                            ),
                           ),
                         ),
                       ],
@@ -135,17 +148,36 @@ class _LoginScreenState extends State<LoginScreen> {
                   focusNode: _usernameFocusNode,
                   cursorColor: const Color(0xFF4C7EDB),
                   style: const TextStyle(color: Color(0xFFE6E7EA)),
-                  decoration: _fieldDecoration('Username', Icons.person_outline),
+                  decoration: _fieldDecoration(
+                    'Username',
+                    Icons.person_outline,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 // Password
                 TextField(
                   controller: _passwordController,
                   focusNode: _passwordFocusNode,
-                  obscureText: true,
+                  obscureText: _obscurePassword,
                   cursorColor: const Color(0xFF4C7EDB),
                   style: const TextStyle(color: Color(0xFFE6E7EA)),
-                  decoration: _fieldDecoration('Password', Icons.lock_outline),
+                  decoration: _fieldDecoration(
+                    'Password',
+                    Icons.lock_outline,
+                    suffixIcon: IconButton(
+                      tooltip: _obscurePassword
+                          ? 'Show password'
+                          : 'Hide password',
+                      onPressed: () =>
+                          setState(() => _obscurePassword = !_obscurePassword),
+                      icon: Icon(
+                        _obscurePassword
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined,
+                        color: const Color(0xFF8A8D94),
+                      ),
+                    ),
+                  ),
                   onSubmitted: (_) => _login(),
                 ),
                 const SizedBox(height: 32),
@@ -168,7 +200,9 @@ class _LoginScreenState extends State<LoginScreen> {
                             height: 24,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
                             ),
                           )
                         : const Text(
@@ -185,10 +219,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 const Text(
                   'Contact admin for account creation',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Color(0xFF8A8D94),
-                    fontSize: 12,
-                  ),
+                  style: TextStyle(color: Color(0xFF8A8D94), fontSize: 12),
                 ),
               ],
             ),
@@ -207,7 +238,11 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  InputDecoration _fieldDecoration(String label, IconData icon) {
+  InputDecoration _fieldDecoration(
+    String label,
+    IconData icon, {
+    Widget? suffixIcon,
+  }) {
     const borderColor = Color(0xFF2C2F38);
     const accentColor = Color(0xFF4C7EDB);
     return InputDecoration(
@@ -215,6 +250,7 @@ class _LoginScreenState extends State<LoginScreen> {
       labelStyle: const TextStyle(color: Color(0xFF8A8D94)),
       floatingLabelStyle: const TextStyle(color: accentColor),
       prefixIcon: Icon(icon, color: const Color(0xFF8A8D94), size: 21),
+      suffixIcon: suffixIcon,
       filled: true,
       fillColor: const Color(0xFF1A1C23),
       contentPadding: const EdgeInsets.symmetric(vertical: 18),
@@ -244,28 +280,6 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
 
-  Future<void> _logout() async {
-    final shouldLogout = await showDialog<bool>(
-      context: context,
-      useRootNavigator: true,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Log out'),
-        content: const Text('Do you want to log out from this device?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(dialogContext, rootNavigator: true).pop(false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.of(dialogContext, rootNavigator: true).pop(true), child: const Text('Log out')),
-        ],
-      ),
-    );
-    if (shouldLogout != true || !mounted) return;
-    await AuthService.logout();
-    if (!mounted) return;
-    Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
-      (route) => false,
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -288,37 +302,27 @@ class _MainScreenState extends State<MainScreen> {
               border: Border(top: BorderSide(color: Color(0xFF22252E))),
             ),
             child: BottomNavigationBar(
-          currentIndex: _currentIndex,
-          onTap: (index) {
-            if (index == 3) {
-              _logout();
-              return;
-            }
-            setState(() => _currentIndex = index);
-          },
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          selectedItemColor: const Color(0xFF4C7EDB),
-          unselectedItemColor: const Color(0xFF8A8D94),
-          type: BottomNavigationBarType.fixed,
-          items: const [
-              BottomNavigationBarItem(
-                icon: Icon(Icons.qr_code_scanner_outlined),
-                label: 'Scan QR',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.inventory_2_outlined),
-                label: 'Inventory',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.history_outlined),
-                label: 'History',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.logout_outlined),
-                label: 'Logout',
-              ),
-            ],
+              currentIndex: _currentIndex,
+              onTap: (index) => setState(() => _currentIndex = index),
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              selectedItemColor: const Color(0xFF4C7EDB),
+              unselectedItemColor: const Color(0xFF8A8D94),
+              type: BottomNavigationBarType.fixed,
+              items: const [
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.qr_code_scanner_outlined),
+                  label: 'Scan QR',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.inventory_2_outlined),
+                  label: 'Inventory',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.history_outlined),
+                  label: 'History',
+                ),
+              ],
             ),
           ),
         ),
