@@ -20,7 +20,28 @@ class AuthService {
     while (url.endsWith('/')) {
       url = url.substring(0, url.length - 1);
     }
+
+    // Laravel's local development server listens on port 8000. A URL such as
+    // http://192.168.1.15/backend/api otherwise goes to port 80, which is why
+    // it returns a 404 even while `php artisan serve` is running correctly.
+    final uri = Uri.tryParse(url);
+    if (uri != null &&
+        uri.scheme == 'http' &&
+        uri.host.isNotEmpty &&
+        !uri.hasPort &&
+        _isIpv4Address(uri.host)) {
+      url = uri.replace(port: 8000).toString();
+    }
     return url;
+  }
+
+  static bool _isIpv4Address(String host) {
+    final parts = host.split('.');
+    return parts.length == 4 &&
+        parts.every((part) {
+          final value = int.tryParse(part);
+          return value != null && value >= 0 && value <= 255;
+        });
   }
 
   static String? validateBaseUrl(String url) {
@@ -33,7 +54,7 @@ class AuthService {
     if (uri == null || !uri.hasAuthority) {
       return 'Invalid URL format. Example: http://192.168.1.10:8000/backend/api';
     }
-    if (!url.contains('/backend/api')) {
+    if (uri.path != '/backend/api' && uri.path != '/backend/api/') {
       return 'URL should include the /backend/api path. Example: http://192.168.1.10:8000/backend/api';
     }
     return null;

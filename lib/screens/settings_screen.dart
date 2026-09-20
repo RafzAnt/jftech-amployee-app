@@ -42,7 +42,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _saveUrl() async {
-    final url = _urlController.text.trim();
+    final url = AuthService.normalizeUrl(_urlController.text);
     final error = AuthService.validateBaseUrl(url);
     if (error != null) {
       setState(() {
@@ -68,7 +68,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _testConnection() async {
-    final url = _urlController.text.trim();
+    final url = AuthService.normalizeUrl(_urlController.text);
     final error = AuthService.validateBaseUrl(url);
     if (error != null) {
       setState(() {
@@ -81,6 +81,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _isTesting = true;
       _message = null;
       _isError = false;
+      _urlController.text = url;
     });
     try {
       final response = await http
