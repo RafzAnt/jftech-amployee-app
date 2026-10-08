@@ -79,7 +79,13 @@ class InventoryItem {
     id: int.tryParse(json['id'].toString()) ?? 0,
     name: json['item_name']?.toString() ?? '',
     category: json['category']?.toString() ?? 'Other',
-    availableQuantity: int.tryParse(json['quantity'].toString()) ?? 0,
+    // The backend deducts pending requests from the shelf count so employees
+    // cannot request stock that has already been reserved for someone else.
+    availableQuantity:
+        int.tryParse(
+          (json['available_quantity'] ?? json['quantity']).toString(),
+        ) ??
+        0,
   );
 }
 

@@ -46,19 +46,19 @@ class _InventoryRequestScreenState extends State<InventoryRequestScreen> {
       _isLoadingItems = false;
       if (result['success'] == true) {
         _availableItems = List<InventoryItem>.from(result['data'] ?? []);
-          _items
-            ..clear()
-            ..addAll(
-              _availableItems.map(
-                (item) => InventoryRequestItem(
-                  inventoryId: item.id,
-                  itemName: item.name,
-                  category: item.category,
-                  availableQuantity: item.availableQuantity,
-                  quantity: 0,
-                ),
+        _items
+          ..clear()
+          ..addAll(
+            _availableItems.map(
+              (item) => InventoryRequestItem(
+                inventoryId: item.id,
+                itemName: item.name,
+                category: item.category,
+                availableQuantity: item.availableQuantity,
+                quantity: 0,
               ),
-            );
+            ),
+          );
       } else {
         _errorMessage = result['message'] ?? 'Unable to load inventory items';
       }
@@ -92,11 +92,10 @@ class _InventoryRequestScreenState extends State<InventoryRequestScreen> {
         if (result['success'] == true) {
           _successMessage =
               result['message'] ?? 'Request submitted successfully!';
-          for (var item in _items) {
-            item.availableQuantity -= item.quantity;
-            item.quantity = 0;
-          }
           _commentsController.clear();
+          // Reload from the server so the remaining quantity reflects other
+          // technicians' pending requests as well as this employee's request.
+          _loadAvailableItems();
         } else {
           _errorMessage = result['message'] ?? 'Failed to submit request';
         }
@@ -124,10 +123,19 @@ class _InventoryRequestScreenState extends State<InventoryRequestScreen> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       if (_successMessage != null)
-                        _buildMessageCard(_successMessage!, const Color(0xFF5FAE7A), Icons.check_circle_outline),
+                        _buildMessageCard(
+                          _successMessage!,
+                          const Color(0xFF5FAE7A),
+                          Icons.check_circle_outline,
+                        ),
                       if (_errorMessage != null)
-                        _buildMessageCard(_errorMessage!, const Color(0xFFC95B5B), Icons.error_outline),
-                      if (_successMessage != null || _errorMessage != null) const SizedBox(height: 12),
+                        _buildMessageCard(
+                          _errorMessage!,
+                          const Color(0xFFC95B5B),
+                          Icons.error_outline,
+                        ),
+                      if (_successMessage != null || _errorMessage != null)
+                        const SizedBox(height: 12),
                       _buildRequestCard(),
                       const SizedBox(height: 20),
                       _buildSubmitButton(),
@@ -143,89 +151,135 @@ class _InventoryRequestScreenState extends State<InventoryRequestScreen> {
   }
 
   Widget _buildHeader() => Container(
-        height: 58,
-        padding: const EdgeInsets.only(left: 20, right: 10),
-        decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: Color(0xFF22252E)))),
-        child: Row(
-          children: [
-            const Expanded(
-              child: Text(
-                'INVENTORY',
-                style: TextStyle(color: _accent, fontSize: 13, fontWeight: FontWeight.w600, fontFamily: 'monospace', letterSpacing: 1.1),
-              ),
+    height: 58,
+    padding: const EdgeInsets.only(left: 20, right: 10),
+    decoration: const BoxDecoration(
+      border: Border(bottom: BorderSide(color: Color(0xFF22252E))),
+    ),
+    child: Row(
+      children: [
+        const Expanded(
+          child: Text(
+            'INVENTORY',
+            style: TextStyle(
+              color: _accent,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              fontFamily: 'monospace',
+              letterSpacing: 1.1,
             ),
-            IconButton(
-              icon: const Icon(Icons.history_outlined, color: _muted, size: 21),
-              tooltip: 'View History',
-              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const InventoryHistoryScreen())),
-            ),
-          ],
+          ),
         ),
-      );
+        IconButton(
+          icon: const Icon(Icons.history_outlined, color: _muted, size: 21),
+          tooltip: 'View History',
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const InventoryHistoryScreen(),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
 
   Widget _buildRequestCard() => Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: _card,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: _border),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: _card,
+      borderRadius: BorderRadius.circular(10),
+      border: Border.all(color: _border),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Row(
           children: [
-            const Row(
-              children: [
-                Icon(Icons.assignment_outlined, color: _accent, size: 20),
-                SizedBox(width: 9),
-                Text('Select items', style: TextStyle(color: Color(0xFFE6E7EA), fontSize: 15, fontWeight: FontWeight.w500)),
-              ],
-            ),
-            const Padding(padding: EdgeInsets.symmetric(vertical: 13), child: Divider(height: 1, color: _border)),
-            if (_isLoadingItems)
-              const Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator(color: _accent, strokeWidth: 2)))
-            else if (_availableItems.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8),
-                child: Text('No items with available stock. Please contact the administrator.', style: TextStyle(color: _muted, fontSize: 12)),
-              )
-            else ...[
-              const Text(
-                'Enter the quantity needed for each item. Leave it blank or 0 if not needed.',
-                style: TextStyle(color: _muted, fontSize: 12),
+            Icon(Icons.assignment_outlined, color: _accent, size: 20),
+            SizedBox(width: 9),
+            Text(
+              'Select items',
+              style: TextStyle(
+                color: Color(0xFFE6E7EA),
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
               ),
-              const SizedBox(height: 16),
-              ..._buildCategoryGroups(_items),
-              const SizedBox(height: 2),
-              _buildCommentsField(),
-            ],
+            ),
           ],
         ),
-      );
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 13),
+          child: Divider(height: 1, color: _border),
+        ),
+        if (_isLoadingItems)
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.all(24),
+              child: CircularProgressIndicator(color: _accent, strokeWidth: 2),
+            ),
+          )
+        else if (_availableItems.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Text(
+              'No items with available stock. Please contact the administrator.',
+              style: TextStyle(color: _muted, fontSize: 12),
+            ),
+          )
+        else ...[
+          const Text(
+            'Enter the quantity needed for each item. Leave it blank or 0 if not needed.',
+            style: TextStyle(color: _muted, fontSize: 12),
+          ),
+          const SizedBox(height: 16),
+          ..._buildCategoryGroups(_items),
+          const SizedBox(height: 2),
+          _buildCommentsField(),
+        ],
+      ],
+    ),
+  );
 
   Widget _buildItemPair(InventoryRequestItem item) => Padding(
-        padding: const EdgeInsets.only(bottom: 14),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10),
-              decoration: BoxDecoration(color: _itemSurface, borderRadius: BorderRadius.circular(8), border: Border.all(color: _border)),
-              child: Row(
-                children: [
-                  Icon(_getIconForItem(item.itemName), color: _accent, size: 18),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(item.itemName, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFFE6E7EA), fontSize: 13, fontWeight: FontWeight.w500)),
+    padding: const EdgeInsets.only(bottom: 14),
+    child: Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10),
+          decoration: BoxDecoration(
+            color: _itemSurface,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: _border),
+          ),
+          child: Row(
+            children: [
+              Icon(_getIconForItem(item.itemName), color: _accent, size: 18),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  item.itemName,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Color(0xFFE6E7EA),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
                   ),
-                  const SizedBox(width: 6),
-                  Text('${item.availableQuantity} available', style: const TextStyle(color: _muted, fontSize: 10)),
-                  const SizedBox(width: 8),
-                  _buildQuantityChip(item),
-                ],
+                ),
               ),
-            ),
-          ],
+              const SizedBox(width: 6),
+              Text(
+                '${item.availableQuantity} available',
+                style: const TextStyle(color: _muted, fontSize: 10),
+              ),
+              const SizedBox(width: 8),
+              _buildQuantityChip(item),
+            ],
+          ),
         ),
-      );
+      ],
+    ),
+  );
 
   List<Widget> _buildCategoryGroups(List<InventoryRequestItem> items) {
     final grouped = <String, List<InventoryRequestItem>>{};
@@ -242,7 +296,13 @@ class _InventoryRequestScreenState extends State<InventoryRequestScreen> {
           children: [
             Text(
               category.toUpperCase(),
-              style: const TextStyle(color: _accent, fontSize: 11, fontWeight: FontWeight.w700, fontFamily: 'monospace', letterSpacing: 1.2),
+              style: const TextStyle(
+                color: _accent,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                fontFamily: 'monospace',
+                letterSpacing: 1.2,
+              ),
             ),
             const SizedBox(height: 8),
             ...grouped[category]!.map(_buildItemPair),
@@ -253,62 +313,93 @@ class _InventoryRequestScreenState extends State<InventoryRequestScreen> {
   }
 
   Widget _buildCommentsField() => Container(
-        decoration: BoxDecoration(
-          color: _itemSurface,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: _border),
+    decoration: BoxDecoration(
+      color: _itemSurface,
+      borderRadius: BorderRadius.circular(8),
+      border: Border.all(color: _border),
+    ),
+    child: TextField(
+      controller: _commentsController,
+      minLines: 2,
+      maxLines: 4,
+      style: const TextStyle(color: Color(0xFFE6E7EA), fontSize: 12),
+      decoration: const InputDecoration(
+        prefixIcon: Padding(
+          padding: EdgeInsets.only(bottom: 34),
+          child: Icon(Icons.mode_comment_outlined, color: _muted, size: 18),
         ),
-        child: TextField(
-          controller: _commentsController,
-          minLines: 2,
-          maxLines: 4,
-          style: const TextStyle(color: Color(0xFFE6E7EA), fontSize: 12),
-          decoration: const InputDecoration(
-            prefixIcon: Padding(
-              padding: EdgeInsets.only(bottom: 34),
-              child: Icon(Icons.mode_comment_outlined, color: _muted, size: 18),
-            ),
-            hintText: 'Comment for this inventory (optional)',
-            hintStyle: TextStyle(color: _muted, fontSize: 12),
-            border: InputBorder.none,
-            contentPadding: EdgeInsets.symmetric(vertical: 12, horizontal: 4),
-          ),
-        ),
-      );
+        hintText: 'Comment for this inventory (optional)',
+        hintStyle: TextStyle(color: _muted, fontSize: 12),
+        border: InputBorder.none,
+        contentPadding: EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+      ),
+    ),
+  );
 
   Widget _buildQuantityChip(InventoryRequestItem item) => Container(
-        width: 46,
-        height: 30,
-        decoration: BoxDecoration(color: _graphite, borderRadius: BorderRadius.circular(6), border: Border.all(color: _border)),
-        child: TextField(
-          key: ValueKey('${item.inventoryId}-${item.quantity}'),
-          textAlign: TextAlign.center,
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(border: InputBorder.none, hintText: 'Qty', hintStyle: TextStyle(color: _muted, fontSize: 10), contentPadding: EdgeInsets.only(bottom: 8)),
-          style: const TextStyle(color: Color(0xFFE6E7EA), fontSize: 12, fontWeight: FontWeight.w600),
-          controller: TextEditingController(text: item.quantity > 0 ? item.quantity.toString() : ''),
-          onChanged: (value) {
-            final qty = int.tryParse(value);
-            item.quantity = qty != null && qty > 0 ? (qty > item.availableQuantity ? item.availableQuantity : qty) : 0;
-          },
-        ),
-      );
+    width: 46,
+    height: 30,
+    decoration: BoxDecoration(
+      color: _graphite,
+      borderRadius: BorderRadius.circular(6),
+      border: Border.all(color: _border),
+    ),
+    child: TextField(
+      key: ValueKey('${item.inventoryId}-${item.quantity}'),
+      textAlign: TextAlign.center,
+      keyboardType: TextInputType.number,
+      decoration: const InputDecoration(
+        border: InputBorder.none,
+        hintText: 'Qty',
+        hintStyle: TextStyle(color: _muted, fontSize: 10),
+        contentPadding: EdgeInsets.only(bottom: 8),
+      ),
+      style: const TextStyle(
+        color: Color(0xFFE6E7EA),
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
+      ),
+      controller: TextEditingController(
+        text: item.quantity > 0 ? item.quantity.toString() : '',
+      ),
+      onChanged: (value) {
+        final qty = int.tryParse(value);
+        item.quantity = qty != null && qty > 0
+            ? (qty > item.availableQuantity ? item.availableQuantity : qty)
+            : 0;
+      },
+    ),
+  );
 
   Widget _buildSubmitButton() => SizedBox(
-        height: 48,
-        child: ElevatedButton(
-          onPressed: _isSubmitting ? null : _submitRequest,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: _accent,
-            foregroundColor: Colors.white,
-            elevation: 0,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-          ),
-          child: _isSubmitting
-              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)))
-              : const Text('SUBMIT', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, letterSpacing: 1)),
-        ),
-      );
+    height: 48,
+    child: ElevatedButton(
+      onPressed: _isSubmitting ? null : _submitRequest,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: _accent,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+      ),
+      child: _isSubmitting
+          ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              ),
+            )
+          : const Text(
+              'SUBMIT',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 1,
+              ),
+            ),
+    ),
+  );
 
   Widget _buildMessageCard(String message, Color color, IconData icon) {
     return Container(

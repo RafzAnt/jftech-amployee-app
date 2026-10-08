@@ -8,9 +8,11 @@ class AuthService {
   static const _isLoggedInKey = 'isLoggedIn';
   static const _backgroundAtKey = 'backgroundAt';
   static const _baseUrlKey = 'apiBaseUrl';
+  static const _hasCustomBaseUrlKey = 'hasCustomApiBaseUrl';
   static const _pendingLogoutIdsKey = 'pendingLogoutHistoryIds';
 
-  static const _defaultBaseUrl = 'http://localhost:8000/backend/api';
+  static const _defaultBaseUrl =
+      'https://jftech-system.vercel.app/backend/api';
   static String _baseUrl = _defaultBaseUrl;
 
   static String get baseUrl => _baseUrl;
@@ -63,8 +65,13 @@ class AuthService {
   static Future<void> initBaseUrl() async {
     final prefs = await SharedPreferences.getInstance();
     final saved = prefs.getString(_baseUrlKey);
-    if (saved != null && saved.isNotEmpty) {
+    final hasCustomUrl = prefs.getBool(_hasCustomBaseUrlKey) ?? false;
+    if (hasCustomUrl && saved != null && saved.isNotEmpty) {
       _baseUrl = normalizeUrl(saved);
+    } else {
+      _baseUrl = _defaultBaseUrl;
+      await prefs.remove(_baseUrlKey);
+      await prefs.remove(_hasCustomBaseUrlKey);
     }
     await _flushPendingLogouts(prefs);
   }
@@ -72,8 +79,24 @@ class AuthService {
   static Future<void> setBaseUrl(String url) async {
     _baseUrl = normalizeUrl(url);
     final prefs = await SharedPreferences.getInstance();
+    if (_baseUrl == _defaultBaseUrl) {
+      await prefs.remove(_baseUrlKey);
+      await prefs.remove(_hasCustomBaseUrlKey);
+      return;
+    }
+
     await prefs.setString(_baseUrlKey, _baseUrl);
+    await prefs.setBool(_hasCustomBaseUrlKey, true);
   }
+
+  static Future<void> useProductionUrl() async {
+    _baseUrl = _defaultBaseUrl;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_baseUrlKey);
+    await prefs.remove(_hasCustomBaseUrlKey);
+  }
+
+  static String get productionBaseUrl => _defaultBaseUrl;
 
   static Future<Map<String, dynamic>> login(
     String username,

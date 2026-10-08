@@ -67,6 +67,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
   }
 
+  Future<void> _useProductionUrl() async {
+    setState(() {
+      _isSaving = true;
+      _message = null;
+      _isError = false;
+    });
+    await AuthService.useProductionUrl();
+    if (!mounted) return;
+    setState(() {
+      _urlController.text = AuthService.productionBaseUrl;
+      _isSaving = false;
+      _message = 'Production server restored. The app will use Vercel by default.';
+    });
+  }
+
   Future<void> _testConnection() async {
     final url = AuthService.normalizeUrl(_urlController.text);
     final error = AuthService.validateBaseUrl(url);
@@ -154,7 +169,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Configure the API server URL. Use your laptop\'s LAN IP (not localhost) when testing from a phone.',
+                'The deployed Vercel server is the default. Enter a LAN URL only when testing your local server from a phone.',
                 style: TextStyle(color: _muted, fontSize: 13),
               ),
               const SizedBox(height: 32),
@@ -169,7 +184,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'API Base URL',
+                      'Testing API URL',
                       style: TextStyle(
                         color: _accent,
                         fontSize: 13,
@@ -208,6 +223,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
+                    SizedBox(
+                      height: 44,
+                      child: OutlinedButton.icon(
+                        onPressed: _isSaving ? null : _useProductionUrl,
+                        icon: const Icon(Icons.cloud_done_outlined),
+                        label: const Text('USE DEPLOYED VERCEL SERVER'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: _accent,
+                          side: const BorderSide(color: _accent),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
                     Row(
                       children: [
                         Expanded(
@@ -276,6 +307,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                         ),
                       ],
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Default: ${AuthService.productionBaseUrl}',
+                      style: TextStyle(color: _muted, fontSize: 11),
                     ),
                     const SizedBox(height: 12),
                     if (_message != null) ...[
