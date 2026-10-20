@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
+
 import '../services/auth_service.dart';
+import '../theme/app_theme.dart';
+import '../widgets/common.dart';
+import 'main_shell.dart';
 import 'settings_screen.dart';
-import 'history_screen.dart';
-import 'inventory_request_screen.dart';
-import 'scanner_screen.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  /// A message to show on top of the form, for example that the session ended.
+  final String? notice;
+
+  const LoginScreen({super.key, this.notice});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -15,15 +19,22 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _usernameFocusNode = FocusNode();
   final _passwordFocusNode = FocusNode();
   bool _isLoading = false;
   bool _obscurePassword = true;
   String? _errorMessage;
 
+  @override
+  void dispose() {
+    _usernameController.dispose();
+    _passwordController.dispose();
+    _passwordFocusNode.dispose();
+    super.dispose();
+  }
+
   Future<void> _login() async {
-    if (_usernameController.text.isEmpty || _passwordController.text.isEmpty) {
-      setState(() => _errorMessage = 'Please fill in all fields');
+    if (_usernameController.text.trim().isEmpty || _passwordController.text.isEmpty) {
+      setState(() => _errorMessage = 'Enter your username and password.');
       return;
     }
 
@@ -37,294 +48,159 @@ class _LoginScreenState extends State<LoginScreen> {
       _passwordController.text,
     );
 
+    if (!mounted) return;
     setState(() => _isLoading = false);
 
-    if (result['success']) {
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const MainScreen()),
-        );
-      }
+    if (result['success'] == true) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const MainShell()),
+      );
     } else {
-      setState(() => _errorMessage = result['message']);
+      setState(() => _errorMessage = result['message']?.toString() ?? 'Could not sign in.');
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final notice = widget.notice;
     return Scaffold(
-      backgroundColor: const Color(0xFF14161C),
-      body: Container(
-        color: const Color(0xFF14161C),
-        child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    IconButton(
-                      icon: const Icon(
-                        Icons.settings_outlined,
-                        color: Color(0xFF8A8D94),
-                      ),
+      backgroundColor: AppColors.background,
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.fromLTRB(24, MediaQuery.of(context).padding.top + 8, 24, 80),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [AppColors.navy, AppColors.primary],
+                ),
+                borderRadius: BorderRadius.vertical(bottom: Radius.circular(36)),
+              ),
+              child: Column(
+                children: [
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: IconButton(
+                      icon: const Icon(Icons.settings_outlined, color: Colors.white70),
                       tooltip: 'Server settings',
                       onPressed: () => Navigator.push(
                         context,
-                        MaterialPageRoute(
-                          builder: (_) => const SettingsScreen(),
-                        ),
+                        MaterialPageRoute(builder: (_) => const SettingsScreen()),
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 36),
-                Image.asset(
-                  'assets/images/jftech_logo.png',
-                  width: 150,
-                  height: 150,
-                  fit: BoxFit.contain,
-                ),
-                const SizedBox(height: 20),
-                const Text(
-                  'JFTECH',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.w900,
-                    color: Color(0xFF4C7EDB),
-                    letterSpacing: 2.5,
-                    height: 0.95,
                   ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Employee App',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF8A8D94),
-                    letterSpacing: 1.8,
+                  // The logo is drawn for a dark background (its ring and its lettering are white), so it sits straight on the blue.
+                  Image.asset(
+                    'assets/images/jftech_logo.png',
+                    width: 140,
+                    height: 140,
+                    fit: BoxFit.contain,
                   ),
-                ),
-                const SizedBox(height: 56),
-                // Error message
-                if (_errorMessage != null)
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    margin: const EdgeInsets.only(bottom: 16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFF1744).withValues(alpha: 0.1),
-                      border: Border.all(
-                        color: const Color(0xFFFF1744).withValues(alpha: 0.3),
-                      ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'JFTECH',
+                    style: TextStyle(
+                      fontSize: 30,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      letterSpacing: 3,
                     ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.error_outline,
-                          color: Color(0xFFFF1744),
-                          size: 20,
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'CONNECTING COMMUNITIES',
+                    style: TextStyle(fontSize: 11, color: Color(0xFFBBD0F2), letterSpacing: 2),
+                  ),
+                ],
+              ),
+            ),
+            Transform.translate(
+              offset: const Offset(0, -48),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: AppCard(
+                  padding: const EdgeInsets.all(22),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Text(
+                        'Employee Login',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.text,
                         ),
-                        const SizedBox(width: 8),
-                        Expanded(
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'Sign in to continue',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 13, color: AppColors.muted),
+                      ),
+                      if (notice != null && notice.isNotEmpty && _errorMessage == null)
+                        Container(
+                          margin: const EdgeInsets.only(top: 14),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppColors.primarySoft,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
                           child: Text(
-                            _errorMessage!,
-                            style: const TextStyle(
-                              color: Color(0xFFFF1744),
-                              fontSize: 14,
-                            ),
+                            notice,
+                            style: const TextStyle(color: AppColors.primaryDark, fontSize: 13),
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                // Username
-                TextField(
-                  controller: _usernameController,
-                  focusNode: _usernameFocusNode,
-                  cursorColor: const Color(0xFF4C7EDB),
-                  style: const TextStyle(color: Color(0xFFE6E7EA)),
-                  decoration: _fieldDecoration(
-                    'Username',
-                    Icons.person_outline,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                // Password
-                TextField(
-                  controller: _passwordController,
-                  focusNode: _passwordFocusNode,
-                  obscureText: _obscurePassword,
-                  cursorColor: const Color(0xFF4C7EDB),
-                  style: const TextStyle(color: Color(0xFFE6E7EA)),
-                  decoration: _fieldDecoration(
-                    'Password',
-                    Icons.lock_outline,
-                    suffixIcon: IconButton(
-                      tooltip: _obscurePassword
-                          ? 'Show password'
-                          : 'Hide password',
-                      onPressed: () =>
-                          setState(() => _obscurePassword = !_obscurePassword),
-                      icon: Icon(
-                        _obscurePassword
-                            ? Icons.visibility_outlined
-                            : Icons.visibility_off_outlined,
-                        color: const Color(0xFF8A8D94),
+                      if (_errorMessage != null) FormError(_errorMessage!),
+                      const FieldLabel('Username'),
+                      TextField(
+                        controller: _usernameController,
+                        textInputAction: TextInputAction.next,
+                        autocorrect: false,
+                        onSubmitted: (_) => _passwordFocusNode.requestFocus(),
+                        decoration: const InputDecoration(
+                          hintText: 'Username or Employee ID',
+                          prefixIcon: Icon(Icons.person_outline, color: AppColors.muted),
+                        ),
                       ),
-                    ),
-                  ),
-                  onSubmitted: (_) => _login(),
-                ),
-                const SizedBox(height: 32),
-                // Login button
-                SizedBox(
-                  height: 52,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _login,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF4C7EDB),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      elevation: 0,
-                    ),
-                    child: _isLoading
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                Colors.white,
-                              ),
+                      const FieldLabel('Password'),
+                      TextField(
+                        controller: _passwordController,
+                        focusNode: _passwordFocusNode,
+                        obscureText: _obscurePassword,
+                        textInputAction: TextInputAction.done,
+                        onSubmitted: (_) => _login(),
+                        decoration: InputDecoration(
+                          hintText: 'Password',
+                          prefixIcon: const Icon(Icons.lock_outline, color: AppColors.muted),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                              color: AppColors.muted,
                             ),
-                          )
-                        : const Text(
-                            'LOGIN',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 2,
-                            ),
+                            onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                           ),
+                        ),
+                      ),
+                      const SizedBox(height: 22),
+                      PrimaryButton(label: 'Login', loading: _isLoading, onPressed: _login),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 24),
-                const Text(
-                  'Contact admin for account creation',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Color(0xFF8A8D94), fontSize: 12),
-                ),
-              ],
+              ),
             ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  @override
-  void dispose() {
-    _usernameController.dispose();
-    _passwordController.dispose();
-    _usernameFocusNode.dispose();
-    _passwordFocusNode.dispose();
-    super.dispose();
-  }
-
-  InputDecoration _fieldDecoration(
-    String label,
-    IconData icon, {
-    Widget? suffixIcon,
-  }) {
-    const borderColor = Color(0xFF2C2F38);
-    const accentColor = Color(0xFF4C7EDB);
-    return InputDecoration(
-      labelText: label,
-      labelStyle: const TextStyle(color: Color(0xFF8A8D94)),
-      floatingLabelStyle: const TextStyle(color: accentColor),
-      prefixIcon: Icon(icon, color: const Color(0xFF8A8D94), size: 21),
-      suffixIcon: suffixIcon,
-      filled: true,
-      fillColor: const Color(0xFF1A1C23),
-      contentPadding: const EdgeInsets.symmetric(vertical: 18),
-      border: const OutlineInputBorder(
-        borderRadius: BorderRadius.all(Radius.circular(4)),
-        borderSide: BorderSide(color: borderColor),
-      ),
-      enabledBorder: const OutlineInputBorder(
-        borderRadius: BorderRadius.all(Radius.circular(4)),
-        borderSide: BorderSide(color: borderColor),
-      ),
-      focusedBorder: const OutlineInputBorder(
-        borderRadius: BorderRadius.all(Radius.circular(4)),
-        borderSide: BorderSide(color: accentColor),
-      ),
-    );
-  }
-}
-
-class MainScreen extends StatefulWidget {
-  const MainScreen({super.key});
-
-  @override
-  State<MainScreen> createState() => _MainScreenState();
-}
-
-class _MainScreenState extends State<MainScreen> {
-  int _currentIndex = 0;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF14161C),
-      body: IndexedStack(
-        index: _currentIndex,
-        children: const [
-          ScannerScreen(),
-          InventoryRequestScreen(),
-          HistoryScreen(),
-        ],
-      ),
-      bottomNavigationBar: SafeArea(
-        top: false,
-        child: SizedBox(
-          height: 64,
-          child: DecoratedBox(
-            decoration: const BoxDecoration(
-              color: Color(0xFF14161C),
-              border: Border(top: BorderSide(color: Color(0xFF22252E))),
+            const Padding(
+              padding: EdgeInsets.only(bottom: 28),
+              child: Text(
+                'Better Connection. Brighter Future.',
+                style: TextStyle(color: AppColors.muted, fontSize: 12, letterSpacing: 0.4),
+              ),
             ),
-            child: BottomNavigationBar(
-              currentIndex: _currentIndex,
-              onTap: (index) => setState(() => _currentIndex = index),
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-              selectedItemColor: const Color(0xFF4C7EDB),
-              unselectedItemColor: const Color(0xFF8A8D94),
-              type: BottomNavigationBarType.fixed,
-              items: const [
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.qr_code_scanner_outlined),
-                  label: 'Scan QR',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.inventory_2_outlined),
-                  label: 'Inventory',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.history_outlined),
-                  label: 'History',
-                ),
-              ],
-            ),
-          ),
+          ],
         ),
       ),
     );

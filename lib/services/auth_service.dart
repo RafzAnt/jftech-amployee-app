@@ -10,6 +10,7 @@ class AuthService {
   static const _baseUrlKey = 'apiBaseUrl';
   static const _hasCustomBaseUrlKey = 'hasCustomApiBaseUrl';
   static const _pendingLogoutIdsKey = 'pendingLogoutHistoryIds';
+  static const _tokenKey = 'apiToken';
 
   static const _defaultBaseUrl =
       'https://jftech-system.vercel.app/backend/api';
@@ -128,6 +129,16 @@ class AuthService {
             final loginHistoryId = int.tryParse(
               user['login_history_id']?.toString() ?? '',
             );
+            // Every later request of the app proves who is signed in with this token.
+            final token = data['token']?.toString() ?? '';
+            if (token.isEmpty) {
+              return {
+                'success': false,
+                'message':
+                    'The server did not give a sign-in token. Update the JFTECH server to the latest version.',
+              };
+            }
+            await prefs.setString(_tokenKey, token);
             await prefs.setBool(_isLoggedInKey, true);
             await prefs.remove(_backgroundAtKey);
             await prefs.setInt(
@@ -149,6 +160,10 @@ class AuthService {
             await prefs.setString(
               'position',
               assignedPosition?.toString().trim() ?? '',
+            );
+            await prefs.setString(
+              'branch',
+              user['branch_name']?.toString().trim() ?? '',
             );
             await prefs.setInt(
               'employeeId',
@@ -216,6 +231,12 @@ class AuthService {
     }
   }
 
+  /// The token the server gave at sign in; null when nobody is signed in.
+  static Future<String?> getToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_tokenKey);
+  }
+
   static Future<bool> isLoggedIn() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getBool(_isLoggedInKey) ?? false;
@@ -250,8 +271,17 @@ class AuthService {
       'username': prefs.getString('username'),
       'fullName': prefs.getString('fullName'),
       'position': prefs.getString('position'),
+      'branch': prefs.getString('branch'),
       'employeeId': prefs.getInt('employeeId'),
     };
+  }
+
+  /// Keeps the saved branch current when the server reports a different one
+  /// (for example after an admin moves the employee, or for a session that was
+  /// started before the app knew about branches).
+  static Future<void> saveBranch(String branch) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('branch', branch.trim());
   }
 
   static Future<Map<String, dynamic>> logout() async {
@@ -259,8 +289,9 @@ class AuthService {
     final historyId = prefs.getInt('login_history_id');
     var logoutRecorded = historyId == null || historyId <= 0;
 
+    final token = prefs.getString(_tokenKey);
     if (historyId != null && historyId > 0) {
-      logoutRecorded = await _recordLogout(historyId);
+      logoutRecorded = await _recordLogout(historyId, token: token);
       if (!logoutRecorded) {
         await _queuePendingLogout(prefs, historyId);
       }
@@ -272,11 +303,15 @@ class AuthService {
     return {'success': true, 'logoutRecorded': logoutRecorded};
   }
 
-  static Future<bool> _recordLogout(int historyId) async {
+  static Future<bool> _recordLogout(int historyId, {String? token}) async {
     try {
       final response = await http
           .post(
             Uri.parse('$baseUrl/employee_logout.php'),
+            headers: {
+              'Accept': 'application/json',
+              if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+            },
             body: {'login_history_id': historyId.toString()},
           )
           .timeout(const Duration(seconds: 10));
@@ -336,8 +371,10 @@ class AuthService {
       prefs.remove('username'),
       prefs.remove('fullName'),
       prefs.remove('position'),
+      prefs.remove('branch'),
       prefs.remove('employeeId'),
       prefs.remove('login_history_id'),
+      prefs.remove(_tokenKey),
     ]);
   }
 }

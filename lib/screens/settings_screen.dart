@@ -1,8 +1,14 @@
 import 'dart:async';
+
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import '../services/auth_service.dart';
 
+import '../services/auth_service.dart';
+import '../theme/app_theme.dart';
+import '../widgets/common.dart';
+
+/// The address of the JFTECH server. The deployed server is the default; a local one is only for testing.
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
@@ -11,12 +17,6 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  static const _graphite = Color(0xFF14161C);
-  static const _card = Color(0xFF1A1C23);
-  static const _border = Color(0xFF2C2F38);
-  static const _accent = Color(0xFF4C7EDB);
-  static const _muted = Color(0xFF8A8D94);
-
   final _urlController = TextEditingController();
   bool _isSaving = false;
   bool _isTesting = false;
@@ -41,359 +41,211 @@ class _SettingsScreenState extends State<SettingsScreen> {
     super.dispose();
   }
 
+  void _show(String message, {required bool error}) {
+    setState(() {
+      _message = message;
+      _isError = error;
+    });
+  }
+
   Future<void> _saveUrl() async {
     final url = AuthService.normalizeUrl(_urlController.text);
     final error = AuthService.validateBaseUrl(url);
     if (error != null) {
-      setState(() {
-        _message = error;
-        _isError = true;
-      });
+      _show(error, error: true);
       return;
     }
     setState(() {
       _isSaving = true;
       _message = null;
-      _isError = false;
     });
-    final normalized = AuthService.normalizeUrl(url);
-    await AuthService.setBaseUrl(normalized);
+    await AuthService.setBaseUrl(url);
     if (!mounted) return;
     setState(() {
-      _urlController.text = normalized;
+      _urlController.text = AuthService.baseUrl;
       _isSaving = false;
-      _message = 'API URL saved successfully';
-      _isError = false;
     });
+    _show('API URL saved successfully', error: false);
   }
 
   Future<void> _useProductionUrl() async {
     setState(() {
       _isSaving = true;
       _message = null;
-      _isError = false;
     });
     await AuthService.useProductionUrl();
     if (!mounted) return;
     setState(() {
       _urlController.text = AuthService.productionBaseUrl;
       _isSaving = false;
-      _message = 'Production server restored. The app will use Vercel by default.';
     });
+    _show('Production server restored. The app will use Vercel by default.', error: false);
   }
 
   Future<void> _testConnection() async {
     final url = AuthService.normalizeUrl(_urlController.text);
     final error = AuthService.validateBaseUrl(url);
     if (error != null) {
-      setState(() {
-        _message = error;
-        _isError = true;
-      });
+      _show(error, error: true);
       return;
     }
     setState(() {
       _isTesting = true;
       _message = null;
-      _isError = false;
       _urlController.text = url;
     });
     try {
+      // ping.php needs no sign in, so it works before anybody has logged in.
       final response = await http
-          .get(Uri.parse('$url/inventory_items.php'))
+          .get(Uri.parse('$url/ping.php'), headers: {'Accept': 'application/json'})
           .timeout(const Duration(seconds: 10));
+      if (!mounted) return;
+      setState(() => _isTesting = false);
       if (response.statusCode == 200) {
-        setState(() {
-          _isTesting = false;
-          _message = 'Connected! Server responded with ${response.statusCode}.';
-          _isError = false;
-        });
+        _show('Connected! The JFTECH server answered.', error: false);
       } else {
-        setState(() {
-          _isTesting = false;
-          _message =
-              'Server responded with ${response.statusCode}. Check the URL path and backend.';
-          _isError = true;
-        });
+        _show(
+          'Server responded with ${response.statusCode}. Check the URL path and that the server is updated.',
+          error: true,
+        );
       }
     } on TimeoutException {
-      setState(() {
-        _isTesting = false;
-        _message =
-            'Connection timed out. Make sure your phone and the server are on the same Wi-Fi, the backend is running, and the Laravel server was started with --host=0.0.0.0.';
-        _isError = true;
-      });
-    } catch (e) {
-      final host = Uri.tryParse(url)?.host ?? 'server';
-      setState(() {
-        _isTesting = false;
-        _message = 'Cannot reach $host. Check that:\n'
-            '1. Your phone and laptop are on the same Wi-Fi network\n'
-            '2. The backend server is running (php artisan serve --host=0.0.0.0)\n'
-            '3. No firewall is blocking port 8000\n'
-            '4. The IP address is correct';
-        _isError = true;
-      });
+      if (!mounted) return;
+      setState(() => _isTesting = false);
+      _show(
+        'Connection timed out. Make sure your phone and the server are on the same Wi-Fi, the backend is running, and the Laravel server was started with --host=0.0.0.0.',
+        error: true,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isTesting = false);
+      final uri = Uri.tryParse(url);
+      final host = uri?.host ?? 'server';
+      final port = (uri != null && uri.hasPort) ? uri.port : 8000;
+      _show(
+        kIsWeb
+            ? 'Cannot read the reply from $host. Check that:\n'
+                '1. The backend server is running (php artisan serve --host=0.0.0.0 --port=$port)\n'
+                '2. The server has the latest update. A web browser only accepts the reply when the server allows it (CORS), and this needs the updated backend\n'
+                '3. The URL ends with /backend/api'
+            : 'Cannot reach $host. Check that:\n'
+                '1. Your phone and laptop are on the same Wi-Fi network\n'
+                '2. The backend server is running (php artisan serve --host=0.0.0.0 --port=$port)\n'
+                '3. No firewall is blocking port $port\n'
+                '4. The IP address is correct',
+        error: true,
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _graphite,
-      appBar: AppBar(
-        backgroundColor: _graphite,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFFE6E7EA)),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          'Settings',
-          style: TextStyle(color: Color(0xFFE6E7EA), fontSize: 18, fontWeight: FontWeight.w600),
-        ),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-        child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Text(
-                'Settings',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w900,
-                  color: Color(0xFFE6E7EA),
-                  letterSpacing: 1,
+      appBar: AppBar(title: const Text('Settings')),
+      body: ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          const Text(
+            'The deployed Vercel server is the default. Enter a LAN URL only when testing your local server from a phone.',
+            style: TextStyle(color: AppColors.muted, fontSize: 13),
+          ),
+          const SizedBox(height: 18),
+          AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'Testing API URL',
+                  style: TextStyle(color: AppColors.primary, fontSize: 13, fontWeight: FontWeight.w800),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'The deployed Vercel server is the default. Enter a LAN URL only when testing your local server from a phone.',
-                style: TextStyle(color: _muted, fontSize: 13),
-              ),
-              const SizedBox(height: 32),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: _card,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: _border),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _urlController,
+                  keyboardType: TextInputType.url,
+                  textInputAction: TextInputAction.done,
+                  decoration: const InputDecoration(hintText: 'http://192.168.1.10:8000/backend/api'),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                const SizedBox(height: 14),
+                OutlinedButton.icon(
+                  onPressed: _isSaving ? null : _useProductionUrl,
+                  icon: const Icon(Icons.cloud_done_outlined),
+                  label: const Text('Use the deployed Vercel server'),
+                ),
+                const SizedBox(height: 12),
+                Row(
                   children: [
-                    const Text(
-                      'Testing API URL',
-                      style: TextStyle(
-                        color: _accent,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 1,
+                    Expanded(child: PrimaryButton(label: 'Save', loading: _isSaving, onPressed: _saveUrl)),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: _isTesting ? null : _testConnection,
+                        child: _isTesting
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2.2),
+                              )
+                            : const Text('Test connection'),
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: _urlController,
-                      style: const TextStyle(color: Color(0xFFE6E7EA)),
-                      cursorColor: _accent,
-                      keyboardType: TextInputType.url,
-                      textInputAction: TextInputAction.done,
-                      decoration: InputDecoration(
-                        hintText: 'http://192.168.1.10:8000/backend/api',
-                        hintStyle: TextStyle(color: _muted, fontSize: 13),
-                        filled: true,
-                        fillColor: const Color(0xFF060E1A),
-                        contentPadding: const EdgeInsets.symmetric(
-                          vertical: 14,
-                          horizontal: 14,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: _border),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: _border),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: _accent, width: 2),
-                        ),
-                      ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'Default: ${AuthService.productionBaseUrl}',
+                  style: const TextStyle(color: AppColors.muted, fontSize: 11),
+                ),
+                if (_message != null)
+                  Container(
+                    margin: const EdgeInsets.only(top: 14),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: _isError ? AppColors.dangerSoft : AppColors.successSoft,
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      height: 44,
-                      child: OutlinedButton.icon(
-                        onPressed: _isSaving ? null : _useProductionUrl,
-                        icon: const Icon(Icons.cloud_done_outlined),
-                        label: const Text('USE DEPLOYED VERCEL SERVER'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: _accent,
-                          side: const BorderSide(color: _accent),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: SizedBox(
-                            height: 48,
-                            child: ElevatedButton(
-                              onPressed: _isSaving ? null : _saveUrl,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: _accent,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
-                              child: _isSaving
-                                  ? const SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: Colors.white,
-                                      ),
-                                    )
-                                  : const Text(
-                                      'SAVE',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
-                                        letterSpacing: 1.5,
-                                      ),
-                                    ),
-                            ),
-                          ),
+                        Icon(
+                          _isError ? Icons.error_outline : Icons.check_circle_outline,
+                          color: _isError ? AppColors.danger : AppColors.success,
+                          size: 18,
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 8),
                         Expanded(
-                          child: SizedBox(
-                            height: 48,
-                            child: OutlinedButton(
-                              onPressed: _isTesting ? null : _testConnection,
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: _accent,
-                                side: const BorderSide(color: _accent),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
-                              child: _isTesting
-                                  ? const SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: _accent,
-                                      ),
-                                    )
-                                  : const Text(
-                                      'TEST',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
-                                        letterSpacing: 1.5,
-                                      ),
-                                    ),
+                          child: Text(
+                            _message!,
+                            style: TextStyle(
+                              color: _isError ? AppColors.danger : AppColors.success,
+                              fontSize: 13,
                             ),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Default: ${AuthService.productionBaseUrl}',
-                      style: TextStyle(color: _muted, fontSize: 11),
-                    ),
-                    const SizedBox(height: 12),
-                    if (_message != null) ...[
-                      const SizedBox(height: 12),
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: _isError
-                              ? const Color(0xFFFF1744).withValues(alpha: 0.1)
-                              : const Color(0xFF00E676).withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: _isError
-                                ? const Color(0xFFFF1744).withValues(alpha: 0.3)
-                                : const Color(0xFF00E676).withValues(alpha: 0.3),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              _isError
-                                  ? Icons.error_outline
-                                  : Icons.check_circle_outline,
-                              color: _isError
-                                  ? const Color(0xFFFF1744)
-                                  : const Color(0xFF00E676),
-                              size: 18,
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                _message!,
-                                style: TextStyle(
-                                  color: _isError
-                                      ? const Color(0xFFFF1744)
-                                      : const Color(0xFF00E676),
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: _card,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: _border),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Current URL',
-                      style: TextStyle(
-                        color: _accent,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 1,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      AuthService.baseUrl,
-                      style: const TextStyle(
-                        color: Color(0xFFE6E7EA),
-                        fontSize: 12,
-                        fontFamily: 'monospace',
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+                  ),
+              ],
+            ),
           ),
-        ),
+          const SizedBox(height: 16),
+          AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Current URL',
+                  style: TextStyle(color: AppColors.primary, fontSize: 13, fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  AuthService.baseUrl,
+                  style: const TextStyle(color: AppColors.text, fontSize: 12, fontFamily: 'monospace'),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
