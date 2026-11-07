@@ -10,7 +10,7 @@ import '../widgets/common.dart';
 import '../widgets/nap_port_picker.dart';
 
 /// The report after an installation: where it was installed, which NAP box and port, the client's details and the items brought
-/// back. The admin checks it (and may fix it) before the client is added and the inventory is updated.
+/// back. The admin confirms it before an inactive registered client becomes active and inventory is updated.
 /// Pops with the server's message when the report was sent.
 class InstallationFormScreen extends StatefulWidget {
   /// What the form offers and the stock to return from. Given only by tests; the app loads them from the server.
@@ -173,6 +173,17 @@ class _InstallationFormScreenState extends State<InstallationFormScreen> {
       _barangay = value.isEmpty ? null : value;
       _portId = null;
       _portLabel = '';
+      // A client chosen from the previous barangay must not stay linked after changing location.
+      if (_selectedClientId != null) {
+        _selectedClientId = null;
+        _name.clear();
+        _contact.clear();
+        _address.clear();
+        _ip.clear();
+        _facebook.clear();
+        _plan = null;
+        _mode = null;
+      }
     });
     _locationTicket++;
     if (_coordinatesAuto) {
@@ -370,7 +381,7 @@ class _InstallationFormScreenState extends State<InstallationFormScreen> {
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
       children: [
         const Text(
-          'Fill this in after the installation. Your admin checks it, fixes anything that is wrong, and then adds the client.',
+          'Fill this in after the installation. Your admin checks the report and confirms the client account.',
           style: TextStyle(color: AppColors.muted, fontSize: 13),
         ),
 
@@ -527,11 +538,11 @@ class _InstallationFormScreenState extends State<InstallationFormScreen> {
           optionsBuilder: (value) {
             final query = value.text.trim().toLowerCase();
             final barangay = _barangay?.trim().toLowerCase();
+            if (barangay == null || barangay.isEmpty) {
+              return const <RegisteredClient>[];
+            }
             final inBarangay = options.clients.where(
-              (client) =>
-                  barangay == null ||
-                  barangay.isEmpty ||
-                  client.barangay.trim().toLowerCase() == barangay,
+              (client) => client.barangay.trim().toLowerCase() == barangay,
             );
             if (query.isEmpty) return inBarangay.take(8);
             return inBarangay
@@ -574,7 +585,7 @@ class _InstallationFormScreenState extends State<InstallationFormScreen> {
                 textCapitalization: TextCapitalization.words,
                 onChanged: (_) => _clearRegisteredClient(),
                 decoration: const InputDecoration(
-                  hintText: 'Tap to see clients here, or type a name',
+                  hintText: 'Choose a barangay, then type a client name',
                 ),
               ),
         ),
@@ -583,16 +594,18 @@ class _InstallationFormScreenState extends State<InstallationFormScreen> {
           child: Text(
             !options.clientSuggestionsSupported
                 ? 'Client suggestions are unavailable. The server needs the latest installation update.'
+                : _barangay == null || _barangay!.trim().isEmpty
+                ? 'Choose a barangay first, then type the client name to see matches.'
                 : options.clients.isEmpty
-                ? 'No uninstalled registered clients are available for this branch.'
+                ? 'No inactive registered clients are available for this branch.'
                 : options.clients.where((client) {
                     final barangay = _barangay?.trim().toLowerCase();
                     return barangay == null ||
                         barangay.isEmpty ||
                         client.barangay.trim().toLowerCase() == barangay;
                   }).isEmpty
-                ? 'No uninstalled registered clients found in this barangay.'
-                : 'Tap the name field to see registered clients, or type to search.',
+                ? 'No inactive registered clients found in this barangay.'
+                : 'Type a name to find an inactive client registered in ${_barangay!}.',
             style: const TextStyle(color: AppColors.muted, fontSize: 12),
           ),
         ),

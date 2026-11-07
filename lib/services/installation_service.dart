@@ -26,6 +26,6 @@ class InstallationService {
     return (place: PlaceLocation.fromJson(result), error: null);
   }
 
-  /// Sends the report. The admin checks it and only then the client is added.
+  /// Sends the report. The admin confirms it before the registered client is activated.
   static Future<Map<String, dynamic>> submit(InstallationDraft draft) => ApiClient.post('installation_create.php', draft.toJson());
 }
