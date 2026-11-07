@@ -6,11 +6,11 @@ class AttendanceService {
   static Future<Map<String, dynamic>> scanQR(String qrCode) =>
       ApiClient.post('scan_attendance.php', {'qr_code': qrCode});
 
-  /// The last days of attendance of the signed-in employee.
-  static Future<({List<AttendanceDay> days, String? error})> history() async {
+  /// The last days of attendance of the signed-in employee, with the totals of those days.
+  static Future<({List<AttendanceDay> days, AttendanceSummary summary, String? error})> history() async {
     final result = await ApiClient.get('attendance_history.php');
     if (result['success'] != true) {
-      return (days: <AttendanceDay>[], error: result['message']?.toString());
+      return (days: <AttendanceDay>[], summary: const AttendanceSummary(), error: result['message']?.toString());
     }
     final rows = result['data'];
     final days = rows is List
@@ -19,6 +19,11 @@ class AttendanceService {
             .map((row) => AttendanceDay.fromJson(Map<String, dynamic>.from(row)))
             .toList()
         : <AttendanceDay>[];
-    return (days: days, error: null);
+    final summary = result['summary'];
+    return (
+      days: days,
+      summary: summary is Map ? AttendanceSummary.fromJson(Map<String, dynamic>.from(summary)) : const AttendanceSummary(),
+      error: null,
+    );
   }
 }

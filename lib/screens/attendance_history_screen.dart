@@ -5,7 +5,7 @@ import '../services/attendance_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common.dart';
 
-/// The last days of attendance.
+/// The last days of attendance, with the totals of those days at the top.
 class AttendanceHistoryScreen extends StatefulWidget {
   const AttendanceHistoryScreen({super.key});
 
@@ -15,6 +15,7 @@ class AttendanceHistoryScreen extends StatefulWidget {
 
 class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
   List<AttendanceDay> _days = const [];
+  AttendanceSummary _summary = const AttendanceSummary();
   String? _error;
   bool _loading = true;
 
@@ -29,6 +30,7 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
     if (!mounted) return;
     setState(() {
       _days = result.days;
+      _summary = result.summary;
       _error = result.error;
       _loading = false;
     });
@@ -54,10 +56,11 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
                       ? ListView(children: const [EmptyState(icon: Icons.event_busy_outlined, message: 'No attendance recorded yet.')])
                       : ListView.separated(
                           padding: const EdgeInsets.all(20),
-                          itemCount: _days.length,
+                          itemCount: _days.length + 1,
                           separatorBuilder: (_, _) => const SizedBox(height: 12),
                           itemBuilder: (context, index) {
-                            final day = _days[index];
+                            if (index == 0) return _SummaryCard(summary: _summary);
+                            final day = _days[index - 1];
                             return AppCard(
                               padding: const EdgeInsets.all(14),
                               child: Column(
@@ -92,6 +95,25 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
                                       status: '',
                                     ),
                                   ],
+                                  if (day.complete || day.lateMinutes > 0 || day.undertimeMinutes > 0 || day.overtimeMinutes > 0) ...[
+                                    const SizedBox(height: 10),
+                                    Wrap(
+                                      spacing: 6,
+                                      runSpacing: 6,
+                                      children: [
+                                        if (day.complete && day.overtimeMinutes == 0)
+                                          const StatusChip(text: 'Complete day', color: AppColors.success, background: AppColors.successSoft),
+                                        if (day.lateMinutes > 0)
+                                          StatusChip(text: 'Late ${durationLabel(day.lateMinutes)}', color: AppColors.warning, background: AppColors.warningSoft),
+                                        if (day.undertimeMinutes > 0)
+                                          StatusChip(text: 'Undertime ${durationLabel(day.undertimeMinutes)}', color: AppColors.danger, background: AppColors.dangerSoft),
+                                        if (day.overtimeMinutes > 0)
+                                          day.overtimeMinutes >= _summary.overtimeMinimumMinutes
+                                              ? StatusChip(text: 'Overtime ${durationLabel(day.overtimeMinutes)}', color: AppColors.primary, background: AppColors.primarySoft)
+                                              : StatusChip(text: 'Overtime ${durationLabel(day.overtimeMinutes)} · not paid', color: AppColors.muted, background: AppColors.primarySoft),
+                                      ],
+                                    ),
+                                  ],
                                   if (day.branch.isNotEmpty) ...[
                                     const SizedBox(height: 8),
                                     Text('Branch: ${day.branch}', style: const TextStyle(color: AppColors.muted, fontSize: 12)),
@@ -104,6 +126,64 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
                 ),
     );
   }
+}
+
+/// What the days below add up to: days worked, hours, and the minutes of late, undertime and overtime.
+class _SummaryCard extends StatelessWidget {
+  final AttendanceSummary summary;
+
+  const _SummaryCard({required this.summary});
+
+  @override
+  Widget build(BuildContext context) {
+    final days = summary.daysWorked == summary.daysWorked.roundToDouble()
+        ? summary.daysWorked.toStringAsFixed(0)
+        : summary.daysWorked.toStringAsFixed(1);
+    return AppCard(
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Last 30 days', style: TextStyle(color: AppColors.text, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              _Figure(label: 'Days worked', value: days),
+              _Figure(label: 'Hours', value: summary.totalHours.toStringAsFixed(1)),
+              _Figure(label: 'Absent', value: '${summary.absentSessions}'),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              _Figure(label: 'Late', value: durationLabel(summary.lateMinutes)),
+              _Figure(label: 'Undertime', value: durationLabel(summary.undertimeMinutes)),
+              _Figure(label: 'Overtime', value: durationLabel(summary.overtimeMinutes)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Figure extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _Figure({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) => Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(value, style: const TextStyle(color: AppColors.primary, fontSize: 17, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 2),
+            Text(label, style: const TextStyle(color: AppColors.muted, fontSize: 12)),
+          ],
+        ),
+      );
 }
 
 class _SessionRow extends StatelessWidget {

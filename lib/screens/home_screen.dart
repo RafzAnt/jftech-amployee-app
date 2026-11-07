@@ -9,7 +9,6 @@ import 'attendance_screen.dart';
 import 'inventory_screen.dart';
 import 'nap_boxes_screen.dart';
 import 'section_page.dart';
-import 'work_requests_screen.dart';
 
 /// The start page after login: a greeting and the three things the employee does every day. Each card opens its own page.
 class HomeScreen extends StatefulWidget {
@@ -59,16 +58,20 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  /// What waits on the Inventory card: requests the admin has not decided, or approved installations that need the technician's report.
+  String? get _inventoryBadge {
+    final me = _me;
+    if (me == null) return null;
+    if (me.pendingInventory > 0) return '${me.pendingInventory} pending';
+    if (me.awaitingInstallationReports > 0) return '${me.awaitingInstallationReports} to report';
+    return null;
+  }
+
   String get _greeting {
     final hour = DateTime.now().hour;
     if (hour < 12) return 'Good morning';
     if (hour < 18) return 'Good afternoon';
     return 'Good evening';
-  }
-
-  Future<void> _openRequests() async {
-    await Navigator.push(context, MaterialPageRoute(builder: (_) => const WorkRequestsScreen()));
-    _load();
   }
 
   /// Opens one of the cards as its own page, and refreshes the Home when the employee comes back (the day may have changed).
@@ -79,67 +82,34 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final attention = _me?.needsAttention ?? 0;
     return RefreshIndicator(
       onRefresh: _load,
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
         children: [
-          Row(
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '$_greeting,',
-                      style: const TextStyle(color: AppColors.muted, fontSize: 13),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      _name.isEmpty ? 'Employee' : _name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppColors.text,
-                        fontSize: 21,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    if (_subtitle.isNotEmpty)
-                      Text(
-                        _subtitle,
-                        style: const TextStyle(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.w600),
-                      ),
-                  ],
+              Text(
+                '$_greeting,',
+                style: const TextStyle(color: AppColors.muted, fontSize: 13),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                _name.isEmpty ? 'Employee' : _name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: AppColors.text,
+                  fontSize: 21,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
-              Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  IconButton(
-                    tooltip: 'Work requests',
-                    onPressed: _openRequests,
-                    icon: const Icon(Icons.notifications_none, color: AppColors.text),
-                  ),
-                  if (attention > 0)
-                    Positioned(
-                      right: 6,
-                      top: 6,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                        decoration: BoxDecoration(
-                          color: AppColors.danger,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(
-                          '$attention',
-                          style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
+              if (_subtitle.isNotEmpty)
+                Text(
+                  _subtitle,
+                  style: const TextStyle(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.w600),
+                ),
             ],
           ),
           const SizedBox(height: 16),
@@ -200,8 +170,8 @@ class _HomeScreenState extends State<HomeScreen> {
           FeatureCard(
             icon: Icons.inventory_2_outlined,
             title: 'Inventory',
-            subtitle: 'View and record items',
-            badge: _me != null && _me!.pendingInventory > 0 ? '${_me!.pendingInventory} pending' : null,
+            subtitle: 'Take items, return them, report installations',
+            badge: _inventoryBadge,
             onTap: () => _open('Inventory', const InventoryScreen()),
           ),
           const SizedBox(height: 12),

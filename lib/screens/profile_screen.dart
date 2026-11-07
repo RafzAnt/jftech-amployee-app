@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../models/models.dart';
 import '../services/auth_service.dart';
 import '../services/field_service.dart';
 import '../theme/app_theme.dart';
@@ -9,10 +8,9 @@ import 'history_screen.dart';
 import 'login_screen.dart';
 import 'section_page.dart';
 import 'settings_screen.dart';
-import 'work_requests_screen.dart';
 
-/// Who is signed in, and the things that are not part of the day-to-day cards: the work requests, the transaction history, the
-/// server address and the log out.
+/// Who is signed in, and the things that are not part of the day-to-day cards: the transaction history, the server
+/// address and the log out.
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
@@ -21,7 +19,6 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  MeInfo? _me;
   String _name = '';
   String _subtitle = '';
 
@@ -48,7 +45,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (!mounted) return;
     final me = result.me;
     setState(() {
-      _me = me;
       if (me != null) {
         _name = me.fullName;
         _subtitle = [me.position, me.branch].where((part) => part.isNotEmpty).join(' · ');
@@ -84,7 +80,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final attention = _me?.needsAttention ?? 0;
     final initial = _name.trim().isEmpty ? '?' : _name.trim()[0].toUpperCase();
     return RefreshIndicator(
       onRefresh: _load,
@@ -130,17 +125,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           const SizedBox(height: 24),
           FeatureCard(
-            icon: Icons.assignment_outlined,
-            title: 'My work requests',
-            subtitle: attention > 0 ? '$attention need your attention' : 'Installation and repair requests',
-            badge: attention > 0 ? '$attention' : null,
-            onTap: () => _push(const WorkRequestsScreen()),
-          ),
-          const SizedBox(height: 12),
-          FeatureCard(
             icon: Icons.history,
             title: 'Transaction history',
-            subtitle: 'Item out, item return, installation and repair',
+            subtitle: 'Item out, item return and installations',
             onTap: () => _push(const SectionPage(title: 'Transaction History', child: HistoryScreen())),
           ),
           const SizedBox(height: 12),

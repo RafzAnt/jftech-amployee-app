@@ -172,8 +172,7 @@ class _NapBoxCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    '${box.totalPorts} ports · ${box.occupiedPorts} occupied'
-                    '${box.reservedPorts > 0 ? ' · ${box.reservedPorts} reserved' : ''}',
+                    '${box.totalPorts} ports · ${box.occupiedPorts} occupied',
                     style: const TextStyle(color: AppColors.text, fontSize: 12, fontWeight: FontWeight.w600),
                   ),
                 ],

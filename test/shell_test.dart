@@ -16,7 +16,7 @@ void main() {
     expect(find.text('Attendance'), findsOneWidget);
     expect(find.text('Inventory'), findsOneWidget);
     expect(find.text('NAP Box Monitoring'), findsOneWidget);
-    expect(find.text('Installation & repair'), findsNothing, reason: 'the work requests are behind the bell and the Profile');
+    expect(find.byIcon(Icons.notifications_none), findsNothing, reason: 'the work requests and their bell are gone');
 
     // The bottom bar has two places, not one for every part of the app.
     expect(find.descendant(of: find.byType(BottomNavigationBar), matching: find.text('Home')), findsOneWidget);
@@ -43,7 +43,7 @@ void main() {
 
     await tester.tap(find.text('Profile'));
     await tester.pumpAndSettle();
-    expect(find.text('My work requests'), findsOneWidget);
+    expect(find.text('My work requests'), findsNothing);
     expect(find.text('Transaction history'), findsOneWidget);
     expect(find.text('Server settings'), findsOneWidget);
     expect(find.text('Log out'), findsOneWidget);

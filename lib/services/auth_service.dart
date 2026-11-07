@@ -18,22 +18,31 @@ class AuthService {
 
   static String get baseUrl => _baseUrl;
 
+  /// The port of the local server (`./serve.sh` in the jftech-system folder). Port 8000 on the development computer is another project.
+  static const localPort = 8001;
+  static const _apiPath = '/backend/api';
+
+  /// Completes what was typed in Server settings. For a local server only the IP address is needed: "192.168.1.22" becomes
+  /// "http://192.168.1.22:8001/backend/api", "192.168.1.22:8080" keeps its port, and a full URL is left as it is.
   static String normalizeUrl(String url) {
     url = url.trim();
     while (url.endsWith('/')) {
       url = url.substring(0, url.length - 1);
     }
 
-    // Laravel's local development server listens on port 8000. A URL such as
-    // http://192.168.1.15/backend/api otherwise goes to port 80, which is why
-    // it returns a 404 even while `php artisan serve` is running correctly.
+    // An IPv4 address without "http://" is the computer that runs the local server.
+    if (RegExp(r'^\d{1,3}(\.\d{1,3}){3}(:\d+)?(/.*)?$').hasMatch(url)) {
+      url = 'http://$url';
+    }
+
     final uri = Uri.tryParse(url);
-    if (uri != null &&
-        uri.scheme == 'http' &&
-        uri.host.isNotEmpty &&
-        !uri.hasPort &&
-        _isIpv4Address(uri.host)) {
-      url = uri.replace(port: 8000).toString();
+    if (uri != null && uri.scheme == 'http' && uri.host.isNotEmpty && _isIpv4Address(uri.host)) {
+      url = uri
+          .replace(
+            port: uri.hasPort ? uri.port : localPort,
+            path: uri.path.isEmpty || uri.path == '/' ? _apiPath : uri.path,
+          )
+          .toString();
     }
     return url;
   }
@@ -51,14 +60,14 @@ class AuthService {
     url = url.trim();
     if (url.isEmpty) return 'URL cannot be empty';
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      return 'URL must start with http:// or https://';
+      return 'Type the IP of the server computer (for example 192.168.1.10) or a full address that starts with http:// or https://';
     }
     final uri = Uri.tryParse(url);
     if (uri == null || !uri.hasAuthority) {
-      return 'Invalid URL format. Example: http://192.168.1.10:8000/backend/api';
+      return 'Invalid address. Type the IP of the server computer, for example 192.168.1.10';
     }
     if (uri.path != '/backend/api' && uri.path != '/backend/api/') {
-      return 'URL should include the /backend/api path. Example: http://192.168.1.10:8000/backend/api';
+      return 'The address must end with /backend/api, or be only the IP of the server computer, for example 192.168.1.10';
     }
     return null;
   }
@@ -98,6 +107,12 @@ class AuthService {
   }
 
   static String get productionBaseUrl => _defaultBaseUrl;
+
+  /// The name saved when the signed-in employee logged in.
+  static Future<String> getFullName() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('fullName')?.trim() ?? '';
+  }
 
   static Future<Map<String, dynamic>> login(
     String username,
@@ -210,10 +225,20 @@ class AuthService {
                 'Invalid response format from server. Verify that the deployed API URL returns JSON.',
           };
         }
+      } else if (response.statusCode == 400 ||
+          response.statusCode == 401 ||
+          response.statusCode == 403 ||
+          response.statusCode == 422) {
+        // Failed credentials are a normal login error; never expose HTTP codes or
+        // the backend response body on the login screen.
+        return {
+          'success': false,
+          'message': 'Invalid username or password.',
+        };
       } else {
         return {
           'success': false,
-          'message': 'Server error: ${response.statusCode}: ${response.body}',
+          'message': 'Unable to sign in right now. Please try again later.',
         };
       }
     } on TimeoutException {

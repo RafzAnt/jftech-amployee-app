@@ -138,7 +138,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               const SizedBox(height: 12),
               _InfoTile(
                 icon: Icons.more_time,
-                label: today.overtimeRunning ? 'Overtime (running)' : 'Overtime',
+                label: today.overtimeCounted ? 'Overtime' : 'Overtime (not paid, under ${durationLabel(today.overtimeMinimumMinutes)})',
                 value: today.overtimeRunning
                     ? 'Since ${clockTime(today.overtimeIn)} · ${today.overtimeLabel}'
                     : '${clockTime(today.overtimeIn)} – ${clockTime(today.overtimeOut)} · ${today.overtimeLabel}',
@@ -146,15 +146,17 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
             ],
             const SizedBox(height: 24),
             PrimaryButton(
-              label: today?.overtimeRunning == true ? 'End Overtime' : (onDuty ? 'Check Out' : 'Check In'),
+              label: onDuty ? 'Check Out' : 'Check In',
               icon: Icons.qr_code_scanner,
               onPressed: _scan,
             ),
             const SizedBox(height: 10),
-            const Text(
-              'Scan the QR code of your branch. The first scan is the time in, the next one the time out. For overtime, scan the overtime QR code: the first scan starts it, the next one ends it.',
+            Text(
+              'Scan the QR code of your branch. The first scan is the time in, the next one the time out. '
+              'If you work past the end of the afternoon, scan the afternoon QR code again when you finish: '
+              'the time after the afternoon ends is your overtime, paid from ${durationLabel(today?.overtimeMinimumMinutes ?? 60)} a day.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: AppColors.muted, fontSize: 12),
+              style: const TextStyle(color: AppColors.muted, fontSize: 12),
             ),
             const SizedBox(height: 16),
             OutlinedButton.icon(

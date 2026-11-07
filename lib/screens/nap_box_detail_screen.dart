@@ -1,6 +1,5 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../models/models.dart';
 import '../services/field_service.dart';
@@ -131,6 +130,28 @@ class _NapBoxDetailScreenState extends State<NapBoxDetailScreen> {
                                 ),
                               ],
                             ),
+                            if (box.coordinates.isNotEmpty) ...[
+                              const SizedBox(height: 4),
+                              InkWell(
+                                onTap: () {
+                                  Clipboard.setData(ClipboardData(text: box.coordinates));
+                                  showMessage(context, 'Coordinates copied. Paste them in Google Maps.');
+                                },
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.my_location, size: 16, color: AppColors.muted),
+                                    const SizedBox(width: 4),
+                                    Expanded(
+                                      child: Text(
+                                        box.coordinates,
+                                        style: const TextStyle(color: AppColors.primary, fontSize: 13, fontWeight: FontWeight.w600),
+                                      ),
+                                    ),
+                                    const Icon(Icons.copy, size: 14, color: AppColors.muted),
+                                  ],
+                                ),
+                              ),
+                            ],
                             const SizedBox(height: 16),
                             Row(
                               children: [
@@ -174,13 +195,11 @@ class _NapBoxDetailScreenState extends State<NapBoxDetailScreen> {
                                         Text(
                                           port.clientCode == null ? port.clientName! : '${port.clientName} · ${port.clientCode}',
                                           style: const TextStyle(color: AppColors.muted, fontSize: 12),
-                                        )
-                                      else if (port.reservedBy != null)
-                                        Text('Request ${port.reservedBy}', style: const TextStyle(color: AppColors.muted, fontSize: 12)),
+                                        ),
                                     ],
                                   ),
                                 ),
-                                StatusChip.forStatus(port.status, port.statusLabel),
+                                StatusChip.forStatus(port.displayStatus, port.statusLabel),
                               ],
                             ),
                           ),

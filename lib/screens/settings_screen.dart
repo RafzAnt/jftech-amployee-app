@@ -113,7 +113,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (!mounted) return;
       setState(() => _isTesting = false);
       _show(
-        'Connection timed out. Make sure your phone and the server are on the same Wi-Fi, the backend is running, and the Laravel server was started with --host=0.0.0.0.',
+        'Connection timed out. Make sure your phone and the server computer are on the same Wi-Fi, the server was started with ./serve.sh (it listens on the whole network), and the computer\'s firewall allows port ${AuthService.localPort}.',
         error: true,
       );
     } catch (_) {
@@ -121,16 +121,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
       setState(() => _isTesting = false);
       final uri = Uri.tryParse(url);
       final host = uri?.host ?? 'server';
-      final port = (uri != null && uri.hasPort) ? uri.port : 8000;
+      final port = (uri != null && uri.hasPort) ? uri.port : AuthService.localPort;
       _show(
         kIsWeb
             ? 'Cannot read the reply from $host. Check that:\n'
-                '1. The backend server is running (php artisan serve --host=0.0.0.0 --port=$port)\n'
+                '1. The backend server is running (./serve.sh)\n'
                 '2. The server has the latest update. A web browser only accepts the reply when the server allows it (CORS), and this needs the updated backend\n'
                 '3. The URL ends with /backend/api'
             : 'Cannot reach $host. Check that:\n'
                 '1. Your phone and laptop are on the same Wi-Fi network\n'
-                '2. The backend server is running (php artisan serve --host=0.0.0.0 --port=$port)\n'
+                '2. The backend server is running (./serve.sh in the jftech-system folder)\n'
                 '3. No firewall is blocking port $port\n'
                 '4. The IP address is correct',
         error: true,
@@ -146,7 +146,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         padding: const EdgeInsets.all(20),
         children: [
           const Text(
-            'The deployed Vercel server is the default. Enter a LAN URL only when testing your local server from a phone.',
+            'The deployed Vercel server is the default. To test your local server from a phone on the same Wi-Fi, type only the IP address of the computer that runs it (for example 192.168.1.22). The app adds http://, port ${AuthService.localPort} and /backend/api.',
             style: TextStyle(color: AppColors.muted, fontSize: 13),
           ),
           const SizedBox(height: 18),
@@ -163,7 +163,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   controller: _urlController,
                   keyboardType: TextInputType.url,
                   textInputAction: TextInputAction.done,
-                  decoration: const InputDecoration(hintText: 'http://192.168.1.10:8000/backend/api'),
+                  decoration: const InputDecoration(labelText: 'Server IP address', hintText: '192.168.1.22'),
                 ),
                 const SizedBox(height: 14),
                 OutlinedButton.icon(

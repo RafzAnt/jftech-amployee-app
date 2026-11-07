@@ -122,7 +122,6 @@ class _ScannerScreenState extends State<ScannerScreen> with WidgetsBindingObserv
     final message = result['message']?.toString() ?? 'Unknown response';
     final scanType = result['scan_type']?.toString() ?? '';
     final timeRecorded = result['time']?.toString() ?? '';
-    final overtimeMinutes = int.tryParse(result['overtime_minutes']?.toString() ?? '') ?? 0;
     final branch = result['branch_name']?.toString().trim() ?? _branch;
     if (isSuccess && branch.isNotEmpty && branch != _branch) {
       // The server is the source of truth for the employee's branch.
@@ -150,10 +149,6 @@ class _ScannerScreenState extends State<ScannerScreen> with WidgetsBindingObserv
                 timeRecorded,
                 style: const TextStyle(color: AppColors.primary, fontSize: 24, fontWeight: FontWeight.w900),
               ),
-            ],
-            if (isSuccess && overtimeMinutes > 0) ...[
-              const SizedBox(height: 4),
-              Text('Overtime: ${overtimeMinutes ~/ 60}h ${overtimeMinutes % 60}m', style: const TextStyle(color: AppColors.muted, fontSize: 13)),
             ],
             if (isSuccess && branch.isNotEmpty) ...[
               const SizedBox(height: 4),

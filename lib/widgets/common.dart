@@ -105,20 +105,15 @@ class StatusChip extends StatelessWidget {
 
   factory StatusChip.forStatus(String status, String label) {
     switch (status) {
-      case 'confirmed':
       case 'approved':
       case 'available':
         return StatusChip(text: label, color: AppColors.success, background: AppColors.successSoft);
       case 'pending':
-      case 'pending_approval':
       case 'reserved':
         return StatusChip(text: label, color: AppColors.warning, background: AppColors.warningSoft);
-      case 'returned':
       case 'denied':
       case 'faulty':
-      case 'rejected':
         return StatusChip(text: label, color: AppColors.danger, background: AppColors.dangerSoft);
-      case 'work_completed':
       case 'occupied':
         return StatusChip(text: label, color: AppColors.primary, background: AppColors.primarySoft);
       default:
@@ -177,7 +172,7 @@ class PrimaryButton extends StatelessWidget {
       );
 }
 
-/// Two or three choices side by side, one of them selected (Existing / New, Installation / Repair...).
+/// Two or three choices side by side, one of them selected.
 class SegmentedChoice<T> extends StatelessWidget {
   final List<T> values;
   final List<String> labels;

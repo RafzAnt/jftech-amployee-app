@@ -5,7 +5,7 @@ import 'home_screen.dart';
 import 'profile_screen.dart';
 
 /// The signed-in app: the Home with its three cards, and the Profile. Attendance, Inventory and NAP Box Monitoring open from the
-/// Home cards; the history, the work requests and the log out are in the Profile.
+/// Home cards; the history and the log out are in the Profile.
 class MainShell extends StatefulWidget {
   /// The tab that is open first (0 is Home, 1 is Profile).
   final int initialIndex;
